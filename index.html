@@ -28,8 +28,8 @@
     #image-stage {
       position: fixed;
       inset: 0;
-      /* Top band extends the dark green header; bottom band extends the cream footer. */
-      background: linear-gradient(to bottom, var(--header) 50%, var(--cream) 50%);
+      /* Landscape poster: left dark green panel, right cream schedule. */
+      background: linear-gradient(to right, var(--header) 31.5%, var(--cream) 31.5%);
       z-index: 1;
     }
     #image-stage .blur {
@@ -60,7 +60,7 @@
       background: #000;
       z-index: 2;
     }
-    /* Landscape 16:9 cover-crop, centred on the portrait viewport. */
+    /* 16:9 video cover-fills the viewport in any orientation. */
     #player,
     #player iframe {
       position: absolute;
