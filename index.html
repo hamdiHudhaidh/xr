@@ -90,12 +90,45 @@
       transition: opacity 0.6s ease;
     }
     #hint.fade { opacity: 0; }
+    #poster-box { position: absolute; z-index: 2; pointer-events: none; }
+    .hl {
+      position: absolute;
+      border-radius: 999px;
+      border: 0.32vmin solid #EAF04A;
+      box-shadow: 0 0 1.2vmin #EAF04A, 0 0 3.5vmin rgba(234, 240, 74, 0.55), inset 0 0 1.5vmin rgba(234, 240, 74, 0.35);
+      animation: hlpulse 2.4s ease-in-out infinite;
+    }
+    .hl .tag {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      background: #EAF04A;
+      color: #2a0f6e;
+      font: 800 1.15vmin/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+      letter-spacing: 0.08em;
+      padding: 0.6vmin 1vmin;
+      border-radius: 999px;
+      white-space: nowrap;
+      box-shadow: 0 0 1.5vmin rgba(234, 240, 74, 0.7);
+    }
+    .hl.next {
+      border-style: dashed;
+      border-color: rgba(234, 240, 74, 0.75);
+      animation: none;
+      box-shadow: 0 0 1.4vmin rgba(234, 240, 74, 0.3);
+    }
+    .hl.next .tag { background: rgba(42, 15, 110, 0.95); color: #EAF04A; border: 0.15vmin solid #EAF04A; box-shadow: none; }
+    @keyframes hlpulse {
+      0%, 100% { box-shadow: 0 0 1vmin #EAF04A, 0 0 2.5vmin rgba(234,240,74,0.45), inset 0 0 1vmin rgba(234,240,74,0.25); }
+      50% { box-shadow: 0 0 1.8vmin #EAF04A, 0 0 5vmin rgba(234,240,74,0.7), inset 0 0 2vmin rgba(234,240,74,0.45); }
+    }
   </style>
 </head>
 <body>
   <div id="image-stage">
     <img class="blur" src="poster.png" alt="" aria-hidden="true">
     <img id="poster" src="poster.png" alt="XR Hub daily schedule">
+    <div id="poster-box"></div>
   </div>
   <div id="video-stage" class="hidden">
     <div id="player"></div>
@@ -234,6 +267,75 @@
       const tag = document.createElement("script");
       tag.src = "https://www.youtube.com/iframe_api";
       document.head.appendChild(tag);
+
+
+      // ---- Current-session highlight (times in Asia/Riyadh) ----
+      const IMG_W = 1920, IMG_H = 1080;
+      // Pill boxes in poster pixels: [left, top, width, height]
+      const COL_RIGHT = 990, COL_LEFT = 289, PILL_W = 641;
+      const ROW_TOP = [500, 605, 710, 815], PILL_H = 107;
+      const SESSIONS = [
+        ["16:15", "16:45"], ["17:30", "18:00"], ["18:30", "19:00"], ["19:15", "19:45"],
+        ["20:00", "20:30"], ["20:45", "21:15"], ["21:30", "22:00"], ["22:15", "22:45"]
+      ];
+      const box = document.getElementById("poster-box");
+      const posterImg = document.getElementById("poster");
+      const toMin = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+
+      function riyadhNow() {
+        const q = new URLSearchParams(location.search).get("now");
+        if (q && /^\d{1,2}:\d{2}$/.test(q)) return { mins: toMin(q), ymd: "2026-11-15" };
+        const parts = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+        }).formatToParts(new Date());
+        const p = {}; parts.forEach(x => p[x.type] = x.value);
+        return { mins: Number(p.hour) * 60 + Number(p.minute), ymd: `${p.year}-${p.month}-${p.day}` };
+      }
+
+      function layoutBox() {
+        const vw = window.innerWidth, vh = window.innerHeight;
+        const s = Math.min(vw / IMG_W, vh / IMG_H);
+        box.style.width = IMG_W * s + "px";
+        box.style.height = IMG_H * s + "px";
+        box.style.left = (vw - IMG_W * s) / 2 + "px";
+        box.style.top = (vh - IMG_H * s) / 2 + "px";
+      }
+
+      function updateHighlight() {
+        const now = riyadhNow();
+        let idx = -1;
+        if (now.ymd >= "2026-11-12" && now.ymd <= "2026-11-30") {
+          idx = SESSIONS.findIndex(([a, b]) => now.mins >= toMin(a) && now.mins < toMin(b));
+        }
+        let mode = "now";
+        if (idx < 0 && now.ymd >= "2026-11-12" && now.ymd <= "2026-11-30") {
+          idx = SESSIONS.findIndex(([a]) => now.mins < toMin(a));
+          mode = "next";
+        }
+        box.innerHTML = "";
+        if (idx < 0) return;
+        const left = idx < 4 ? COL_RIGHT : COL_LEFT;
+        const top = ROW_TOP[idx % 4];
+        const el = document.createElement("div");
+        el.className = mode === "now" ? "hl" : "hl next";
+        el.style.left = (left / IMG_W * 100) + "%";
+        el.style.top = (top / IMG_H * 100) + "%";
+        el.style.width = (PILL_W / IMG_W * 100) + "%";
+        el.style.height = (PILL_H / IMG_H * 100) + "%";
+        const tag = document.createElement("div");
+        tag.className = "tag";
+        tag.textContent = mode === "now" ? "NOW · الآن" : "NEXT · التالي";
+        tag.style.left = "50%";
+        tag.style.top = "0";
+        el.appendChild(tag);
+        box.appendChild(el);
+      }
+
+      window.addEventListener("resize", layoutBox);
+      layoutBox();
+      updateHighlight();
+      setInterval(updateHighlight, 15000);
 
       startImagePhase();
     })();
