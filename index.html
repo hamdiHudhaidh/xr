@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="theme-color" content="#142826">
+  <title>XR Hub Display</title>
+  <style>
+    :root {
+      --header: #142826;
+      --cream: #F4EFE6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--header);
+      cursor: none;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      overscroll-behavior: none;
+    }
+    #image-stage {
+      position: fixed;
+      inset: 0;
+      /* Top band extends the dark green header; bottom band extends the cream footer. */
+      background: linear-gradient(to bottom, var(--header) 50%, var(--cream) 50%);
+      z-index: 1;
+    }
+    #image-stage .blur {
+      position: absolute;
+      inset: -8%;
+      width: 116%;
+      height: 116%;
+      object-fit: cover;
+      filter: blur(36px) saturate(1.08);
+      transform: scale(1.05);
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    #poster {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+      z-index: 1;
+      pointer-events: none;
+    }
+    #video-stage {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      background: #000;
+      z-index: 2;
+    }
+    /* Landscape 16:9 cover-crop, centred on the portrait viewport. */
+    #player,
+    #player iframe {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100vw, calc(100vh * 16 / 9));
+      height: max(100vh, calc(100vw * 9 / 16));
+      transform: translate(-50%, -50%);
+      border: 0;
+      pointer-events: none;
+    }
+    .hidden { display: none !important; }
+    #hint {
+      position: fixed;
+      left: 50%;
+      bottom: 4vh;
+      transform: translateX(-50%);
+      z-index: 10;
+      color: var(--header);
+      background: rgba(244, 239, 230, 0.9);
+      font: 500 18px/1.3 system-ui, -apple-system, sans-serif;
+      letter-spacing: 0.02em;
+      padding: 0.55em 1em;
+      border-radius: 999px;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 0.6s ease;
+    }
+    #hint.fade { opacity: 0; }
+  </style>
+</head>
+<body>
+  <div id="image-stage">
+    <img class="blur" src="poster.png" alt="" aria-hidden="true">
+    <img id="poster" src="poster.png" alt="XR Hub daily schedule">
+  </div>
+  <div id="video-stage" class="hidden">
+    <div id="player"></div>
+  </div>
+  <div id="hint">Tap for fullscreen &amp; sound</div>
+
+  <script>
+    (function () {
+      const VIDEO_ID = "0bbAwABTzNQ";
+      const DEFAULT_IMG_SECONDS = 60;
+      const ERROR_FALLBACK_MS = 4000;
+
+      const imageStage = document.getElementById("image-stage");
+      const videoStage = document.getElementById("video-stage");
+      const hint = document.getElementById("hint");
+
+      let player = null;
+      let unmuted = false;
+      let phase = "image";
+      let imgTimer = null;
+      let errorTimer = null;
+      let ready = false;
+
+      function imgSeconds() {
+        const v = new URLSearchParams(location.search).get("img");
+        const n = v == null ? NaN : Number(v);
+        return Number.isFinite(n) && n >= 0 ? n : DEFAULT_IMG_SECONDS;
+      }
+
+      function clearTimers() {
+        if (imgTimer) { clearTimeout(imgTimer); imgTimer = null; }
+        if (errorTimer) { clearTimeout(errorTimer); errorTimer = null; }
+      }
+
+      function startImagePhase() {
+        phase = "image";
+        clearTimers();
+        imageStage.classList.remove("hidden");
+        videoStage.classList.add("hidden");
+        if (player && typeof player.pauseVideo === "function") {
+          try { player.pauseVideo(); } catch (e) {}
+        }
+        imgTimer = setTimeout(startVideoPhase, imgSeconds() * 1000);
+      }
+
+      function startVideoPhase() {
+        if (!ready || !player || typeof player.playVideo !== "function") {
+          imgTimer = setTimeout(startVideoPhase, 1500);
+          return;
+        }
+        phase = "video";
+        clearTimers();
+        imageStage.classList.add("hidden");
+        videoStage.classList.remove("hidden");
+        try {
+          if (typeof player.seekTo === "function") player.seekTo(0, true);
+          if (unmuted) {
+            player.unMute();
+          } else {
+            player.mute();
+          }
+          player.playVideo();
+        } catch (e) {
+          errorTimer = setTimeout(startImagePhase, ERROR_FALLBACK_MS);
+        }
+      }
+
+      function onPlayerReady() {
+        ready = true;
+        try { player.mute(); } catch (e) {}
+      }
+
+      function onStateChange(event) {
+        if (!window.YT) return;
+        if (phase === "video" && event.data === YT.PlayerState.ENDED) {
+          startImagePhase();
+        }
+      }
+
+      function onPlayerError() {
+        if (phase !== "video") return;
+        errorTimer = setTimeout(startImagePhase, ERROR_FALLBACK_MS);
+      }
+
+      window.onYouTubeIframeAPIReady = function () {
+        player = new YT.Player("player", {
+          videoId: VIDEO_ID,
+          host: "https://www.youtube.com",
+          playerVars: {
+            autoplay: 0,
+            mute: 1,
+            controls: 0,
+            rel: 0,
+            playsinline: 1,
+            modestbranding: 1,
+            fs: 0,
+            disablekb: 1,
+            iv_load_policy: 3,
+            cc_load_policy: 0,
+            origin: location.origin
+          },
+          events: {
+            onReady: onPlayerReady,
+            onStateChange: onStateChange,
+            onError: onPlayerError
+          }
+        });
+      };
+
+      async function unlock() {
+        hint.classList.add("fade");
+        try {
+          if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+            await document.documentElement.requestFullscreen();
+          }
+        } catch (e) {}
+        unmuted = true;
+        if (player) {
+          try {
+            player.unMute();
+            if (typeof player.setVolume === "function") player.setVolume(100);
+          } catch (e) {}
+        }
+      }
+
+      document.addEventListener("click", unlock);
+      document.addEventListener("touchend", unlock, { passive: true });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " " || e.key === "f") unlock();
+      });
+
+      setTimeout(function () { hint.classList.add("fade"); }, 8000);
+
+      // Load the IFrame Player API.
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(tag);
+
+      startImagePhase();
+    })();
+  </script>
+</body>
+</html>
