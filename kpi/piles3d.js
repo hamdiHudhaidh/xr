@@ -1,10 +1,10 @@
-/* Exact-count 3D heaps: one headset per participant, one cube per engagement. */
+/* Exact-count 3D heaps: one Quest 3 headset per combined daily total. */
 (function (global) {
   "use strict";
   const CAP = 20000;
   const SAFE = { top: 0.22, bottom: 0.66, left: 0.03, right: 0.97 };
   let renderer, scene, camera, canvas;
-  let meshBody, meshVisor, meshCubeB, meshCubeW, meshShadow;
+  let meshBody, meshVisor, meshShadow;
   let dummy = null;
   let vTmp = null;
   let raf = 0;
@@ -91,17 +91,21 @@
   /* Iconic Quest-3 silhouette: rounded white shell + a large dark front visor.
      Unit width = 1, sitting on y = 0, visor on the -Z face. */
   function headsetParts(THREE) {
-    const shell = roundedBoxGeom(THREE, 1.0, 0.50, 0.56, 0.14);
-    const brow = roundedBoxGeom(THREE, 0.94, 0.11, 0.30, 0.04);
-    brow.translate(0, 0.45, -0.08);
-    const strap = roundedBoxGeom(THREE, 0.18, 0.13, 0.58, 0.05);
-    strap.translate(0, 0.22, 0.30);
-    const body = mergeBufferGeometries(THREE, [shell, brow, strap]);
-    shell.dispose();
-    brow.dispose();
-    strap.dispose();
-    const visor = roundedBoxGeom(THREE, 0.88, 0.34, 0.15, 0.05);
-    visor.translate(0, 0.06, -0.36);
+    const shell = roundedBoxGeom(THREE, 1.0, 0.56, 0.68, 0.16);
+    const brow = roundedBoxGeom(THREE, 0.94, 0.13, 0.34, 0.05);
+    brow.translate(0, 0.50, -0.10);
+    const cushion = roundedBoxGeom(THREE, 0.80, 0.34, 0.20, 0.08);
+    cushion.translate(0, 0.22, 0.30);
+    const armL = roundedBoxGeom(THREE, 0.16, 0.16, 0.72, 0.07);
+    armL.translate(-0.46, 0.26, 0.16);
+    const armR = roundedBoxGeom(THREE, 0.16, 0.16, 0.72, 0.07);
+    armR.translate(0.46, 0.26, 0.16);
+    const rear = roundedBoxGeom(THREE, 0.78, 0.14, 0.16, 0.06);
+    rear.translate(0, 0.28, 0.50);
+    const body = mergeBufferGeometries(THREE, [shell, brow, cushion, armL, armR, rear]);
+    [shell, brow, cushion, armL, armR, rear].forEach(g => g.dispose());
+    const visor = roundedBoxGeom(THREE, 0.72, 0.28, 0.14, 0.05);
+    visor.translate(0, 0.10, -0.40);
     body.computeBoundingBox();
     const s = 1 / Math.max(1e-6, body.boundingBox.max.x - body.boundingBox.min.x);
     body.scale(s, s, s);
@@ -117,18 +121,21 @@
     return { body: body, visor: visor };
   }
 
-  /* Rounded cone / dome pile with a FIXED base radius. Big counts grow taller,
-     never wider, so neighbouring heaps keep a ground gap. */
-  function settleCone(n, itemR, maxR, maxH, seed) {
+  /* Rounded mound: wide base, dome top (stretched ellipsoid).
+     Base radius is clamped so neighbouring days keep a ground gap;
+     large counts grow taller, not wider. */
+  function settleDome(n, itemR, maxR, maxH, seed) {
     const empty = { pos: [], R: 0, H: 0 };
     if (n <= 0) return empty;
-    const capR = Math.max(itemR * 1.05, maxR);
+    const capR = Math.max(itemR * 1.15, maxR);
 
     function generate(H, spacing, yStep, rng) {
       const pts = [];
-      for (let y = itemR * 0.12; y <= H + itemR * 0.02; y += yStep) {
-        const t = Math.min(1, Math.max(0, (y - itemR * 0.12) / Math.max(H - itemR * 0.12, itemR)));
-        const layerR = capR * Math.pow(1 - t, 0.62);
+      const y0 = itemR * 0.12;
+      for (let y = y0; y <= H + itemR * 0.02; y += yStep) {
+        const t = Math.min(1, Math.max(0, (y - y0) / Math.max(H - y0, itemR)));
+        /* Ellipsoid slice: full at the base, rounded at the crown. */
+        const layerR = capR * Math.sqrt(Math.max(0, 1 - t * t));
         const rings = layerR < spacing * 0.42 ? 0 : Math.max(1, Math.round(layerR / spacing));
         for (let k = 0; k <= rings; k++) {
           const rad = rings === 0 ? 0 : (k / rings) * layerR;
@@ -136,7 +143,7 @@
           const rot = rng() * Math.PI * 2;
           for (let i = 0; i < count; i++) {
             const a = rot + (i + (rng() - 0.5) * 0.07) * (2 * Math.PI / Math.max(count, 1));
-            const rr = count === 1 ? rad * (0.2 + rng() * 0.25) : Math.max(0, rad + (rng() - 0.5) * spacing * 0.07);
+            const rr = count === 1 ? rad * (0.15 + rng() * 0.2) : Math.max(0, rad + (rng() - 0.5) * spacing * 0.07);
             const x = Math.cos(a) * rr;
             const z = Math.sin(a) * rr;
             if (Math.hypot(x, z) > capR * 0.99) continue;
@@ -144,11 +151,11 @@
               x: x,
               y: y + (rng() - 0.5) * itemR * 0.06,
               z: z,
-              rx: (rng() - 0.5) * 0.85,
+              rx: (rng() - 0.5) * 0.7,
               ry: rng() * Math.PI * 2,
-              rz: (rng() - 0.5) * 0.5,
-              s: 0.92 + rng() * 0.16,
-              faceCam: rng() < 0.9
+              rz: (rng() - 0.5) * 0.4,
+              s: 0.94 + rng() * 0.14,
+              faceCam: rng() < 0.88
             });
           }
         }
@@ -160,11 +167,12 @@
       return pts;
     }
 
-    let spacing = itemR * 1.68;
-    let yStep = itemR * 0.82;
+    let spacing = itemR * 1.72;
+    let yStep = itemR * 0.88;
+    /* Half-ellipsoid volume ≈ 2/3 π R² H. */
     let H = Math.max(
-      itemR * 2.4,
-      (3 * n * spacing * spacing * yStep) / (Math.PI * capR * capR)
+      itemR * 2.2,
+      (1.5 * n * spacing * spacing * yStep) / (Math.PI * capR * capR)
     );
     if (maxH > 0) H = Math.min(H, maxH);
 
@@ -179,7 +187,7 @@
         spacing *= 0.91;
         yStep *= 0.93;
       } else {
-        H *= 1.15;
+        H *= 1.14;
         if (maxH > 0) H = Math.min(H, maxH);
       }
       pts = pack();
@@ -200,12 +208,12 @@
   }
 
   function radiusForCount(n, itemR, maxR) {
-    const spacing = itemR * 1.68;
-    const yStep = itemR * 0.82;
+    const spacing = itemR * 1.72;
+    const yStep = itemR * 0.88;
     const vol = Math.max(1, n) * spacing * spacing * yStep;
-    /* Slightly taller-than-wide pile: H ≈ 1.25 R, cone volume 1/3 π R² H. */
-    const R = Math.cbrt(vol / 1.31);
-    return Math.min(maxR, Math.max(itemR * 1.4, R));
+    /* Dome with H ≈ 0.95 R: volume ≈ 2/3 π R³ * 0.95. Prefer a wide mound. */
+    const R = Math.cbrt(vol / 1.99);
+    return Math.min(maxR, Math.max(itemR * 1.5, R));
   }
 
   function init(el) {
@@ -248,33 +256,22 @@
 
       const hs = headsetParts(THREE);
       const matBody = new THREE.MeshStandardMaterial({
-        color: 0xf4f2f6, roughness: 0.38, metalness: 0.06,
-        emissive: 0xd8d2cc, emissiveIntensity: 0.16
+        color: 0xf6f4f8, roughness: 0.36, metalness: 0.07,
+        emissive: 0xddd8d2, emissiveIntensity: 0.18
       });
       const matVisor = new THREE.MeshStandardMaterial({
         color: 0x05060a, roughness: 0.12, metalness: 0.84,
         emissive: 0x07080c, emissiveIntensity: 0.1
       });
-      const matB = new THREE.MeshStandardMaterial({
-        color: 0x0c0c0e, roughness: 0.36, metalness: 0.18,
-        emissive: 0x101012, emissiveIntensity: 0.08
-      });
-      const matW = new THREE.MeshStandardMaterial({
-        color: 0xffffff, roughness: 0.32, metalness: 0.05,
-        emissive: 0xeae6de, emissiveIntensity: 0.14
-      });
-      const cubeG = roundedBoxGeom(THREE, 1, 1, 1, 0.16);
       meshBody = new THREE.InstancedMesh(hs.body, matBody, CAP);
       meshVisor = new THREE.InstancedMesh(hs.visor, matVisor, CAP);
-      meshCubeB = new THREE.InstancedMesh(cubeG, matB, CAP);
-      meshCubeW = new THREE.InstancedMesh(cubeG, matW, CAP);
       const shadowG = new THREE.CircleGeometry(1, 28);
       const shadowM = new THREE.MeshBasicMaterial({
-        color: 0x000000, transparent: true, opacity: 0.38, depthWrite: false
+        color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false
       });
       meshShadow = new THREE.InstancedMesh(shadowG, shadowM, 64);
       meshShadow.renderOrder = -1;
-      [meshBody, meshVisor, meshCubeB, meshCubeW, meshShadow].forEach(m => {
+      [meshBody, meshVisor, meshShadow].forEach(m => {
         m.frustumCulled = false;
         m.count = 0;
         m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -325,8 +322,8 @@
         const dy = camera.position.y - p.y;
         const dz = camera.position.z - (wz + p.z);
         const yaw = Math.atan2(dx, -dz);
-        const pitch = -Math.atan2(dy, Math.hypot(dx, dz) || 1);
-        dummy.rotation.set(pitch + (p.rx || 0) * 0.22, yaw + (p.ry || 0) * 0.14, (p.rz || 0) * 0.2);
+        const pitch = -Math.atan2(dy, Math.hypot(dx, dz) || 1) * 0.42;
+        dummy.rotation.set(pitch + (p.rx || 0) * 0.18, yaw + (p.ry || 0) * 0.2, (p.rz || 0) * 0.16);
       } else {
         dummy.rotation.set(p.rx || 0, p.ry || 0, p.rz || 0);
       }
@@ -361,13 +358,13 @@
   function update(slots) {
     if (!renderer) return [];
     resize();
-    const sig = JSON.stringify(slots.map(s => [s.ymd, s.participants || 0, s.engagement || 0, s.index, slots.length])) + "|v14";
+    const sig = JSON.stringify(slots.map(s => [s.ymd, s.participants || 0, s.engagement || 0, s.index, slots.length])) + "|v17";
     const size = (canvas.clientWidth || 0) + "x" + (canvas.clientHeight || 0);
     const full = sig + "|" + size;
     if (full === lastSig && heapMeta.length) return heapMeta;
     lastSig = full;
 
-    [meshBody, meshVisor, meshCubeB, meshCubeW, meshShadow].forEach(m => { if (m) m.count = 0; });
+    [meshBody, meshVisor, meshShadow].forEach(m => { if (m) m.count = 0; });
     heapMeta = [];
 
     const n = Math.max(slots.length, 1);
@@ -375,8 +372,8 @@
     const W = canvas.clientWidth || global.innerWidth || 1920;
     const H = canvas.clientHeight || global.innerHeight || 1080;
     const slotW = span / n;
-    /* Diameter is 76% of the slot, leaving a visible ground gap between days. */
-    const maxR = slotW * 0.34;
+    /* Diameter is 80% of the slot, leaving a visible ground gap between days. */
+    const maxR = slotW * 0.40;
 
     const mid = dayAnchor(Math.floor((n - 1) / 2), n, span);
     const groundPt = project(mid.wx, 0, mid.wz);
@@ -387,7 +384,7 @@
     const maxHworld = maxHpx / pxPerWorldY;
 
     /* Keep pieces readable at 1024px (~14px there, ~26px on a 1920 canvas). */
-    const targetPx = Math.max(22, Math.min(30, W * 0.0135));
+    const targetPx = Math.max(24, Math.min(34, W * 0.015));
     let instScale = targetPx / pxPerWorldX;
     if (instScale > maxR * 0.95) instScale = maxR * 0.95;
     instScale = Math.max(instScale, 0.04);
@@ -396,10 +393,10 @@
     const busiest = Math.max(0, ...slots.map(s => (s.participants || 0) + (s.engagement || 0)));
     let fitScale = instScale;
     if (busiest > 0) {
-      const trial = settleCone(busiest, itemR, maxR, 0, "fit");
+      const trial = settleDome(busiest, itemR, maxR, 0, "fit");
       if (trial.H > maxHworld && trial.H > 0) {
         /* Prefer a slightly denser/taller-capped pack over shrinking pieces. */
-        const capped = settleCone(busiest, itemR, maxR, maxHworld, "fit");
+        const capped = settleDome(busiest, itemR, maxR, maxHworld, "fit");
         if (capped.pos.length < busiest) {
           const shrink = Math.max(0.85, maxHworld / trial.H);
           fitScale = instScale * shrink;
@@ -427,40 +424,19 @@
       if (filled) {
         const total = pN + eN;
         const pileR = radiusForCount(total, packR, maxR);
-        const mound = settleCone(total, packR, pileR, maxHworld, "h:" + s.ymd);
-        const kinds = [];
-        for (let k = 0; k < pN; k++) kinds.push("p");
-        for (let k = 0; k < eN; k++) kinds.push("e");
-        const rng = seedRng("mix:" + s.ymd);
-        for (let k = kinds.length - 1; k > 0; k--) {
-          const j = Math.floor(rng() * (k + 1));
-          const tmp = kinds[k]; kinds[k] = kinds[j]; kinds[j] = tmp;
-        }
-        const heads = [], black = [], white = [];
-        let ci = 0;
-        for (let k = 0; k < mound.pos.length; k++) {
-          const item = mound.pos[k];
-          const kind = kinds[k] || "p";
-          if (kind === "p") heads.push(item);
-          else {
-            (ci % 2 === 0 ? black : white).push(item);
-            ci++;
-          }
-        }
-        writeInstances(meshBody, heads, a.wx, a.wz, instScale, true, 1.12, 1.0, 0.95);
-        writeInstances(meshVisor, heads, a.wx, a.wz, instScale, true, 1.12, 1.0, 0.95);
-        writeInstances(meshCubeB, black, a.wx, a.wz, instScale * 0.88, false);
-        writeInstances(meshCubeW, white, a.wx, a.wz, instScale * 0.88, false);
+        const mound = settleDome(total, packR, pileR, maxHworld, "h:" + s.ymd);
+        writeInstances(meshBody, mound.pos, a.wx, a.wz, instScale, true, 1.08, 1.0, 1.0);
+        writeInstances(meshVisor, mound.pos, a.wx, a.wz, instScale, true, 1.08, 1.0, 1.0);
         writeShadow(a.wx, a.wz, mound.R);
-        const top = project(a.wx, mound.H + packR * 0.7, a.wz);
+        const top = project(a.wx, mound.H + packR * 0.75, a.wz);
         rec.heap = { n: total, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: mound.H, R: mound.R };
-        if (pN > 0) rec.p = { n: pN, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: mound.H };
-        if (eN > 0) rec.e = { n: eN, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: mound.H };
+        rec.p = { n: pN, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: mound.H };
+        rec.e = { n: eN, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: mound.H };
       }
       heapMeta.push(rec);
     });
 
-    [meshBody, meshVisor, meshCubeB, meshCubeW, meshShadow].forEach(m => {
+    [meshBody, meshVisor, meshShadow].forEach(m => {
       if (m) m.instanceMatrix.needsUpdate = true;
     });
     return heapMeta;

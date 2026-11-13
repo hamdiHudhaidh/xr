@@ -609,8 +609,8 @@
             m && m.e ? m.e.topY : gy
           );
           let stack = '<div class="plot-tot">' + fmt(rec.total) + "</div>";
-          if (rec.participants > 0) stack += '<div class="plot-val p">' + fmt(rec.participants) + "</div>";
-          if (rec.engagement > 0) stack += '<div class="plot-val e">' + fmt(rec.engagement) + "</div>";
+          stack += '<div class="plot-val p">' + fmt(rec.participants || 0) + "</div>";
+          stack += '<div class="plot-val e">' + fmt(rec.engagement || 0) + "</div>";
           html += '<div class="plot-stack" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + topY.toFixed(1) + 'px;z-index:' + (z + 3) + '">' + stack + "</div>";
           html += '<div class="plot ground' + (isToday ? " today" : "") + '" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + gy.toFixed(1) + 'px;z-index:' + z + '"><div class="shadow"></div><div class="day-lbl">' + p.day + "</div></div>";
         } else {
