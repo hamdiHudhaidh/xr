@@ -57,15 +57,16 @@
   .prow { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 8px; border-radius: 16px; background: rgba(255,255,255,.1); }
   .prow .nm { flex: 1; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
   .av-thumb, .av-ph {
-    width: 48px; height: 48px; flex: none;
+    flex: none;
     box-sizing: border-box;
     display: grid; place-items: center;
     font-weight: 800; font-size: 15px; line-height: 1;
   }
   .av-thumb {
+    width: 40px; height: 72px;
     border-radius: 8px;
     object-fit: contain;
-    object-position: center;
+    object-position: center bottom;
     background-color: #1c0a4d;
     background-image:
       linear-gradient(45deg, rgba(255,255,255,.16) 25%, transparent 25%),
@@ -76,6 +77,7 @@
     background-position: 0 0, 0 5px, 5px -5px, -5px 0;
   }
   .av-ph {
+    width: 40px; height: 40px;
     border-radius: 50%;
     border: 2px solid rgba(255,255,255,.45);
     background: #5a3a9a; color: #fff;
@@ -216,36 +218,110 @@
     const c = colorFor(name);
     return `<span class="av-ph" style="background:${c.bg};color:${c.fg}" aria-hidden="true">${esc(initials(name))}</span>`;
   }
-  function resizeAvatar(file) {
+  function isImageFile(file) {
+    if (!file) return false;
+    if (!file.type) return /\.(png|jpe?g|webp|gif|heic|heif)$/i.test(file.name || "");
+    return file.type.startsWith("image/");
+  }
+  function loadImage(file) {
     return new Promise((resolve, reject) => {
-      if (!file || !file.type || !file.type.startsWith("image/")) { reject(new Error("Please choose an image.")); return; }
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const MAX = 55000; // stay under the Worker's 60,000-character cap
-        const draw = (size, quality) => {
-          const canvas = document.createElement("canvas");
-          canvas.width = size; canvas.height = size;
-          const ctx = canvas.getContext("2d", { alpha: true });
-          ctx.clearRect(0, 0, size, size);
-          const scale = Math.min(size / Math.max(1, img.width), size / Math.max(1, img.height));
-          const dw = img.width * scale, dh = img.height * scale;
-          ctx.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
-          const webp = canvas.toDataURL("image/webp", quality);
-          if (webp.startsWith("data:image/webp")) return webp;
-          return canvas.toDataURL("image/png");
-        };
-        let size = 200, q = 0.86, data = draw(size, q);
-        const isWebp = data.startsWith("data:image/webp");
-        while (data.length > MAX && isWebp && q > 0.5) { q -= 0.08; data = draw(size, q); }
-        while (data.length > MAX && size > 96) { size -= 20; data = draw(size, q); }
-        if (data.length > 60000) { reject(new Error("That photo is too large. Try a simpler cut-out.")); return; }
-        resolve(data);
+      const fail = () => reject(new Error("Couldn't read that image."));
+      const fromEl = () => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = () => { URL.revokeObjectURL(url); fail(); };
+        img.src = url;
       };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Couldn't read that image.")); };
-      img.src = url;
+      if (typeof createImageBitmap === "function") {
+        createImageBitmap(file).then(resolve).catch(fromEl);
+      } else fromEl();
     });
+  }
+  function trimAlphaBox(img) {
+    const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    const ctx = c.getContext("2d", { alpha: true });
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0);
+    let minX = w, minY = h, maxX = -1, maxY = -1;
+    try {
+      const data = ctx.getImageData(0, 0, w, h).data;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (data[(y * w + x) * 4 + 3] > 8) {
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+    } catch (e) { /* tainted canvas; use the full image */ }
+    if (maxX < minX) return { sx: 0, sy: 0, sw: w, sh: h };
+    const pad = 2;
+    const sx = Math.max(0, minX - pad), sy = Math.max(0, minY - pad);
+    const ex = Math.min(w, maxX + 1 + pad), ey = Math.min(h, maxY + 1 + pad);
+    return { sx, sy, sw: Math.max(1, ex - sx), sh: Math.max(1, ey - sy) };
+  }
+  let webpAlphaOk = null;
+  function probeWebpAlpha() {
+    if (webpAlphaOk !== null) return Promise.resolve(webpAlphaOk);
+    return new Promise(resolve => {
+      const c = document.createElement("canvas");
+      c.width = 2; c.height = 2;
+      const ctx = c.getContext("2d", { alpha: true });
+      ctx.clearRect(0, 0, 2, 2);
+      ctx.fillStyle = "rgba(0,255,0,0.6)";
+      ctx.fillRect(0, 0, 1, 1);
+      let url = "";
+      try { url = c.toDataURL("image/webp", 0.8); } catch (e) { webpAlphaOk = false; resolve(false); return; }
+      if (!url.startsWith("data:image/webp")) { webpAlphaOk = false; resolve(false); return; }
+      const im = new Image();
+      im.onload = () => {
+        const t = document.createElement("canvas");
+        t.width = 2; t.height = 2;
+        const x = t.getContext("2d", { alpha: true });
+        x.clearRect(0, 0, 2, 2);
+        x.drawImage(im, 0, 0);
+        const clear = x.getImageData(1, 1, 1, 1).data[3] < 16;
+        const kept = x.getImageData(0, 0, 1, 1).data[3] > 20;
+        webpAlphaOk = clear && kept;
+        resolve(webpAlphaOk);
+      };
+      im.onerror = () => { webpAlphaOk = false; resolve(false); };
+      im.src = url;
+    });
+  }
+  async function resizeAvatar(file) {
+    if (!isImageFile(file)) throw new Error("Please choose an image.");
+    const img = await loadImage(file);
+    const box = trimAlphaBox(img);
+    const MAX = 55000; // stay under the Worker's 60,000-character cap
+    const MAX_SIDE = 240;
+    const useWebp = await probeWebpAlpha();
+    const draw = (maxSide, quality) => {
+      const scale = Math.min(1, maxSide / Math.max(box.sw, box.sh));
+      const dw = Math.max(1, Math.round(box.sw * scale));
+      const dh = Math.max(1, Math.round(box.sh * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = dw; canvas.height = dh;
+      const ctx = canvas.getContext("2d", { alpha: true });
+      ctx.clearRect(0, 0, dw, dh); // never fill black / opaque
+      ctx.drawImage(img, box.sx, box.sy, box.sw, box.sh, 0, 0, dw, dh);
+      if (useWebp) {
+        const webp = canvas.toDataURL("image/webp", quality);
+        if (webp.startsWith("data:image/webp")) return webp;
+      }
+      return canvas.toDataURL("image/png");
+    };
+    let side = MAX_SIDE, q = 0.86, data = draw(side, q);
+    while (data.length > MAX && useWebp && q > 0.5) { q -= 0.08; data = draw(side, q); }
+    while (data.length > MAX && side > 96) { side -= 20; data = draw(side, q); }
+    if (data.startsWith("data:image/jpeg")) throw new Error("Couldn't keep the transparent background. Try a PNG cut-out.");
+    if (data.length > 60000) throw new Error("That photo is too large. Try a simpler cut-out.");
+    return data;
   }
   async function saveAvatars() {
     setStatus("Saving photo…");

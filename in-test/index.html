@@ -148,26 +148,43 @@
     .team .nm.members { white-space: normal; text-overflow: clip; padding: 0 9%; line-height: 1.1; font-weight: 700; }
     .team.past { border-color: rgba(255,255,255,0.25); color: #d6d3df; background: #3a3550; }
     /* Avatar test: rocking cut-out photos (transparency preserved) plus a name. */
+    #team-layer { overflow: visible; }
     .team.avatars {
       flex-direction: row;
-      align-items: center;
+      align-items: flex-end;
       justify-content: center;
       overflow: visible;
+      /* Background lives on ::before so Safari doesn't clip tall cut-outs to the rounded chip. */
+      background: transparent;
+      border-color: transparent;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .team.avatars::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
       background: rgba(36, 16, 99, 0.94);
+      border: 0.14vmin solid rgba(234, 240, 74, 0.55);
+      border-radius: 999px;
       box-shadow: 0 0.2vmin 0.8vmin rgba(10, 0, 40, 0.35);
     }
-    .team.avatars.past {
+    .team.avatars.past::before {
       border-color: rgba(255,255,255,0.25);
       background: rgba(58, 53, 80, 0.94);
       box-shadow: none;
     }
     .member {
+      position: relative;
+      z-index: 1;
       flex: none;
+      flex-shrink: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      min-width: 0;
+      justify-content: flex-end;
       overflow: visible;
     }
     .av-name {
@@ -182,6 +199,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       unicode-bidi: plaintext;
+      flex: none;
     }
     .team.past .av-name { color: #d6d3df; }
     .av {
@@ -476,7 +494,7 @@
       // Free space between the TO time and the FROM label, centred on the arrow (poster px).
       // Taller than the name-only chip so the avatar and the label both fit.
       const ARROW_X = [320, 320, 320, 320, 320, 320, 332, 320];
-      const ZONE_W = 296, ZONE_TOP = 5, ZONE_H = 81;
+      const ZONE_W = 304, ZONE_TOP = 4, ZONE_H = 84;
       let teamData = null;
       let avatars = {};
       function renderTeams(now) {
@@ -491,40 +509,42 @@
           el.className = "team avatars" + (now.mins >= toMin(b) ? " past" : "");
           place(el, i, ARROW_X[i] - ZONE_W / 2, ZONE_TOP, ZONE_W, ZONE_H);
           const n = people.length;
-          const padX = 8, padY = 5;
+          const padX = 6, padY = 4;
           const gap = n <= 3 ? 8 : n <= 4 ? 5 : n <= 6 ? 4 : 3;
           const availW = ZONE_W - padX * 2;
           const colW = (availW - gap * Math.max(0, n - 1)) / n;
-          // Name first: at least 9 screen px so it stays readable in portrait, then the avatar takes the leftover height.
-          const namePx = Math.max(9, 13.5 * unit);
+          // Names stay readable on iPad-scale posters; the photo box is taller than it is wide so a full-body cut-out fits.
+          const namePx = Math.max(9.5, 11.5 * unit);
           const nameGap = Math.max(1.5, 2 * unit);
           const availH = (ZONE_H - padY * 2) * unit;
-          const sizePx = Math.max(16, Math.min((colW * unit), availH - namePx * 1.15 - nameGap));
+          const avW = Math.max(16, colW * unit);
+          const avH = Math.max(avW * 1.05, availH - namePx * 1.15 - nameGap);
           el.style.gap = (gap * unit) + "px";
           el.style.padding = (padY * unit) + "px " + (padX * unit) + "px";
           people.forEach((p, j) => {
             const cell = document.createElement("div");
             cell.className = "member";
-            cell.style.width = (colW * unit).toFixed(2) + "px";
+            cell.style.width = avW.toFixed(2) + "px";
             const src = avatars[p.name];
             const av = document.createElement(src ? "img" : "div");
             av.className = "av " + (src ? "photo" : "fallback");
-            const px = sizePx.toFixed(2) + "px";
-            av.style.width = px;
-            av.style.height = px;
             av.style.animationDuration = (2.2 + (j % 4) * 0.22) + "s";
             av.style.animationDelay = (-j * 0.37) + "s";
             av.title = p.name;
             if (src) {
+              av.style.width = avW.toFixed(2) + "px";
+              av.style.height = avH.toFixed(2) + "px";
               av.src = src;
               av.alt = p.name;
               av.draggable = false;
             } else {
+              const s = Math.min(avW, Math.max(18, avH * 0.55));
+              av.style.width = av.style.height = s.toFixed(2) + "px";
               av.textContent = initials(p.name);
               const col = colorFor(p.name);
               av.style.background = col.bg;
               av.style.color = col.fg;
-              av.style.fontSize = (sizePx * 0.42).toFixed(2) + "px";
+              av.style.fontSize = (s * 0.42).toFixed(2) + "px";
             }
             const nm = document.createElement("div");
             nm.className = "av-name";
@@ -538,11 +558,11 @@
           });
           teamLayer.appendChild(el);
           el.querySelectorAll(".av-name").forEach(nm => {
-            // Shrink a little so short and long names stay in the same range, then ellipsize.
             let fs = namePx;
-            const minFs = Math.max(namePx * 0.88, Math.min(namePx, 9));
+            // Don't shrink below a readable size; 4–5 letter names should fit without an ellipsis.
+            const minFs = Math.max(8.5, Math.min(namePx, 9.5), namePx * 0.82);
             while (fs > minFs + 0.05 && nm.scrollWidth > nm.clientWidth + 0.5) {
-              fs -= 0.3;
+              fs = Math.max(minFs, fs - 0.3);
               nm.style.fontSize = fs.toFixed(2) + "px";
             }
           });
