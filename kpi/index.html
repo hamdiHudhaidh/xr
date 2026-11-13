@@ -604,7 +604,7 @@
         const gy = m ? m.groundY : baseY;
         const z = Math.round((1 - recede) * 20);
         if (filled) {
-          const topY = Math.min(
+          const topY = (m && m.heap && m.heap.topY) ? m.heap.topY : Math.min(
             m && m.p ? m.p.topY : gy,
             m && m.e ? m.e.topY : gy
           );
