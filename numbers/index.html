@@ -91,11 +91,65 @@
   .gate input { text-align: center; font-size: 22px; letter-spacing: .3em; margin: 14px 0 10px; }
   .err-text { color: #ffb3d6; min-height: 20px; font-size: 13px; }
   .banner { background: var(--pink); color: #fff; padding: 10px 14px; border-radius: 16px; margin-bottom: 12px; font-weight: 600; }
+
+  .day-total {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 18px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: rgba(28, 10, 77, 0.94);
+    border-color: rgba(234,240,74,.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .day-total .dt-label { flex: 1 1 140px; }
+  .day-total .dt-label .ar {
+    font-family: Cairo, "Noto Sans Arabic", sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    direction: rtl;
+    color: var(--yellow);
+  }
+  .day-total .dt-label .en {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .dt-stats { display: flex; gap: 10px; flex: 2 1 280px; }
+  .dt-stat {
+    flex: 1;
+    background: rgba(255,255,255,.07);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 8px 12px;
+    min-width: 0;
+  }
+  .dt-stat .n {
+    font-weight: 800;
+    font-size: 28px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .dt-stat.p .n { color: #c4a0ff; }
+  .dt-stat.e .n { color: var(--yellow); }
+  .dt-stat .lbl { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .dt-stat .lbl .ar { font-family: Cairo, "Noto Sans Arabic", sans-serif; font-weight: 800; font-size: 13px; direction: rtl; }
+  .dt-stat.p .lbl .ar, .dt-stat.p .lbl .en { color: #c4a0ff; }
+  .dt-stat.e .lbl .ar, .dt-stat.e .lbl .en { color: var(--yellow); }
+  .dt-stat .lbl .en { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
   @media (max-width: 620px) {
     .wrap { padding: 10px 10px 80px; }
     .card { padding: 12px; border-radius: 18px; }
     .counters { grid-template-columns: 1fr; }
     .step button { width: 64px; height: 64px; }
+    .day-total .dt-stat .n { font-size: 24px; }
   }
 </style>
 </head>
@@ -278,6 +332,32 @@
 
   function dayHas(d) { return !!Object.keys((data.numbers || {})[d] || {}).length; }
 
+  function dayTotals() {
+    let p = 0, e = 0;
+    for (let s = 1; s <= SESS.length; s++) {
+      p += valOf(s, "participants") || 0;
+      e += valOf(s, "engagement") || 0;
+    }
+    return { p, e };
+  }
+  function dayTotalHtml() {
+    const t = dayTotals();
+    return `<div class="card day-total" id="dayTotal">
+      <div class="dt-label"><div class="ar">مجموع اليوم</div><div class="en">Daily total</div></div>
+      <div class="dt-stats">
+        <div class="dt-stat p"><div class="n" id="dayTotalP">${t.p}</div><div class="lbl"><span class="ar">المشاركون</span><span class="en">Participants</span></div></div>
+        <div class="dt-stat e"><div class="n" id="dayTotalE">${t.e}</div><div class="lbl"><span class="ar">التفاعل</span><span class="en">Engagement</span></div></div>
+      </div>
+    </div>`;
+  }
+  function refreshDayTotal() {
+    const t = dayTotals();
+    const p = document.getElementById("dayTotalP");
+    const e = document.getElementById("dayTotalE");
+    if (p) p.textContent = String(t.p);
+    if (e) e.textContent = String(t.e);
+  }
+
   function render() {
     const sy = window.scrollY;
     const day = ui.day;
@@ -296,6 +376,7 @@
         <div class="grow"><b style="color:#fff">${dow(day)} ${Number(day.slice(8))} Nov</b> · ${counted} of ${SESS.length} sessions counted</div>
         <input type="date" id="dayDate" min="${DATES[0]}" max="${DATES[DATES.length - 1]}" value="${day}">
       </div>
+      ${dayTotalHtml()}
       ${SESS.map((pair, i) => sessCard(i, pair)).join("")}`;
     window.scrollTo(0, sy);
     bind();
@@ -369,6 +450,7 @@
       const counted = SESS.filter((_, i) => hasRec(i + 1)).length;
       grow.innerHTML = `<b style="color:#fff">${dow(ui.day)} ${Number(ui.day.slice(8))} Nov</b> · ${counted} of ${SESS.length} sessions counted`;
     }
+    refreshDayTotal();
   }
 
   function bindStep(btn, fn) {
