@@ -1,7 +1,7 @@
 const ORIGINS = ["https://hamdihudhaidh.github.io", "http://localhost:8765", "http://127.0.0.1:8765"];
 const KEYS = new Set(["data", "test", "avatars"]);
-const MAX_BYTES = { data: 500000, test: 500000, avatars: 2500000 };
-const AVATAR_ONE_MAX = 60000;
+const MAX_BYTES = { data: 500000, test: 500000, avatars: 20000000 };
+const AVATAR_ONE_MAX = 400000;
 const AVATAR_NAME_MAX = 80;
 const AVATAR_MAX_COUNT = 200;
 const AVATAR_RE = /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=\s]+$/;

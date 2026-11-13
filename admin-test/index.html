@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2a0f6e">
@@ -298,8 +299,8 @@
     if (!isImageFile(file)) throw new Error("Please choose an image.");
     const img = await loadImage(file);
     const box = trimAlphaBox(img);
-    const MAX = 55000; // stay under the Worker's 60,000-character cap
-    const MAX_SIDE = 240;
+    const MAX = 300000; // stay under the Worker's 400,000-character cap
+    const MAX_SIDE = 360;
     const useWebp = await probeWebpAlpha();
     const draw = (maxSide, quality) => {
       const scale = Math.min(1, maxSide / Math.max(box.sw, box.sh));
@@ -320,7 +321,7 @@
     while (data.length > MAX && useWebp && q > 0.5) { q -= 0.08; data = draw(side, q); }
     while (data.length > MAX && side > 96) { side -= 20; data = draw(side, q); }
     if (data.startsWith("data:image/jpeg")) throw new Error("Couldn't keep the transparent background. Try a PNG cut-out.");
-    if (data.length > 60000) throw new Error("That photo is too large. Try a simpler cut-out.");
+    if (data.length > 400000) throw new Error("That photo is too large. Try a simpler cut-out.");
     return data;
   }
   async function saveAvatars() {
@@ -402,7 +403,7 @@
     const sy = window.scrollY;
     app.innerHTML = `
       <header><h1>XR Hub <span>Admin</span> <small style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em">AVATAR TEST</small></h1>
-        <div class="status ${statusCls}" id="status">${esc(statusText)}</div>
+        <span style="font-size:11px;opacity:.6">v3</span><div class="status ${statusCls}" id="status">${esc(statusText)}</div>
         <button class="lock" id="lockBtn" title="Forget passcode on this device">Lock</button></header>
       <nav class="tabs">
         ${[["teams", "Teams"], ["sessions", "Sessions"], ["roster", "Roster"]].map(([k, l]) => `<button data-tab="${k}" class="${ui.tab === k ? "on" : ""}">${l}</button>`).join("")}
