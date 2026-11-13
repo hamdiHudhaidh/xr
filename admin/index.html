@@ -5,6 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2a0f6e">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&display=swap">
 <meta name="robots" content="noindex">
 <title>XR Hub · Admin</title>
 <style>
@@ -136,6 +137,63 @@
   .off-chip.on { background: var(--yellow); color: var(--purple); border-color: var(--yellow); }
   .off-team { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .04em; margin: 10px 0 6px; }
   .off-team:first-child { margin-top: 0; }
+
+  .nbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0 12px; }
+  .nbar .grow { flex: 1 1 200px; color: var(--muted); font-size: 13px; }
+  .nbar input[type=date] { width: auto; flex: none; background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 14px; padding: 8px 10px; outline: none; }
+  .sess-card.counted { border-color: rgba(234,240,74,.45); }
+  .sess-top { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+  .sess-card.counted .num { background: #c4a0ff; color: var(--purple); }
+  .who { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .who b { color: #fff; font-weight: 700; }
+  .badge { margin-left: auto; flex: none; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; background: rgba(196,160,255,.22); color: #e4d0ff; }
+  .badge.wait { background: rgba(255,255,255,.1); color: var(--muted); }
+  .counters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .counter { background: rgba(255,255,255,.07); border: 1px solid var(--line); border-radius: 18px; padding: 10px 10px 12px; text-align: center; }
+  .counter .clabel { font-weight: 800; font-size: 13px; }
+  .counter .clabel .ar { font-family: Cairo, "Noto Sans Arabic", sans-serif; direction: rtl; color: #c4a0ff; }
+  .counter .clabel .en { display: block; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-top: 2px; }
+  .step { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; }
+  .step button {
+    width: 56px; height: 56px; border: 0; border-radius: 50%;
+    background: var(--yellow); color: var(--purple); font-size: 32px; font-weight: 800;
+    line-height: 1; cursor: pointer; touch-action: manipulation; user-select: none;
+    display: grid; place-items: center; padding: 0;
+  }
+  .step button:active { transform: scale(0.96); }
+  .step input {
+    width: 84px; text-align: center; font-size: 28px; font-weight: 800;
+    padding: 8px 4px; border-radius: 16px; font-variant-numeric: tabular-nums;
+    color: #c4a0ff; background: rgba(255,255,255,.08); border: 1px solid var(--line); outline: none;
+  }
+  .step input:focus { border-color: var(--yellow); }
+  .clear { margin-top: 10px; }
+  .day-total {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px;
+    position: sticky; top: 0; z-index: 5;
+    background: rgba(28, 10, 77, 0.94);
+    border-color: rgba(234,240,74,.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .day-total .dt-label { flex: 1 1 140px; }
+  .day-total .dt-label .ar { font-family: Cairo, "Noto Sans Arabic", sans-serif; font-weight: 800; font-size: 18px; direction: rtl; color: var(--yellow); }
+  .day-total .dt-label .en { display: block; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-top: 2px; }
+  .dt-stats { display: flex; gap: 10px; flex: 2 1 320px; }
+  .dt-stat { flex: 1; background: rgba(255,255,255,.07); border: 1px solid var(--line); border-radius: 16px; padding: 8px 12px; min-width: 0; }
+  .dt-stat .n { font-weight: 800; font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .dt-stat.p .n { color: #c4a0ff; }
+  .dt-stat.e .n { color: var(--yellow); }
+  .dt-stat.c { flex: 1.35; background: rgba(234, 240, 74, 0.16); border-color: rgba(234, 240, 74, 0.55); }
+  .dt-stat.c .n { color: #fff; font-size: 34px; }
+  .dt-stat .lbl { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .dt-stat .lbl .ar { font-family: Cairo, "Noto Sans Arabic", sans-serif; font-weight: 800; font-size: 13px; direction: rtl; }
+  .dt-stat.p .lbl .ar, .dt-stat.p .lbl .en { color: #c4a0ff; }
+  .dt-stat.e .lbl .ar, .dt-stat.e .lbl .en { color: var(--yellow); }
+  .dt-stat.c .lbl .ar, .dt-stat.c .lbl .en { color: #fff; }
+  .dt-stat .lbl .en { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  @media (max-width: 620px) { .counters { grid-template-columns: 1fr; } .step button { width: 64px; height: 64px; } }
+
   @media (max-width: 520px) { .wrap { padding: 10px 10px 80px; } .card { padding: 12px; border-radius: 18px; } }
 </style>
 </head>
@@ -171,7 +229,9 @@
   let avatars = {};
   let pass = localStorage.getItem(PASS_KEY) || "";
   const today = todayRiyadh();
-  const ui = { tab: new URLSearchParams(location.search).get("tab") || "teams", day: DATES.includes(today) ? today : "default", rosterDay: DATES.includes(today) ? today : DATES[0], swapping: null };
+  let tab = new URLSearchParams(location.search).get("tab") || "teams";
+  if (tab === "roster") tab = "numbers";
+  const ui = { tab: tab, day: DATES.includes(today) ? today : "default", numbersDay: DATES.includes(today) ? today : DATES[0], swapping: null };
   let saveTimer = null, dirty = false, statusText = "", statusCls = "";
 
   function clampCount(n) {
@@ -464,15 +524,15 @@
     app.innerHTML = `
       <header><h1>XR Hub <span>Admin</span></h1>
         <div class="status ${statusCls}" id="status">${esc(statusText)}</div>
-        <a class="lock" href="../numbers/">Numbers</a>
+        <a class="lock" href="../clicker/">Clicker</a>
         <a class="lock" href="../kpi/">KPI</a>
         <button class="lock" id="lockBtn" title="Forget passcode on this device">Lock</button></header>
       <nav class="tabs">
-        ${[["teams", "Teams"], ["sessions", "Sessions"], ["roster", "Roster"]].map(([k, l]) => `<button data-tab="${k}" class="${ui.tab === k ? "on" : ""}">${l}</button>`).join("")}
+        ${[["teams", "Teams"], ["sessions", "Sessions"], ["numbers", "Numbers"]].map(([k, l]) => `<button data-tab="${k}" class="${ui.tab === k ? "on" : ""}">${l}</button>`).join("")}
       </nav>
       <section class="${ui.tab === "teams" ? "on" : ""}">${renderTeams()}</section>
       <section class="${ui.tab === "sessions" ? "on" : ""}">${renderSessions()}</section>
-      <section class="${ui.tab === "roster" ? "on" : ""}">${renderRoster()}</section>`;
+      <section class="${ui.tab === "numbers" ? "on" : ""}">${renderNumbers()}</section>`;
     window.scrollTo(0, sy);
     bind();
   }
@@ -583,18 +643,134 @@
     </div>`;
   }
 
-  function renderRoster() {
-    const d = ui.rosterDay;
-    const rows = SESS.map((_, i) => {
-      const r = resolve(d, i + 1);
-      return `<div class="card sess"><div class="num">${i + 1}</div><div>
-        <div class="time">${sessTime(i)}</div>
-        ${r.team ? `<div class="roster-team">${esc(r.team.name)}</div>
-          <div class="roster-people">${r.people.length ? r.people.map(p => p.swappedFrom ? `<span class="s">${esc(p.name)} <i>(for ${esc(p.swappedFrom)})</i></span>` : esc(p.name)).join(", ") : `<span class="empty">No people</span>`}</div>`
-          : `<div class="empty">No team assigned</div>`}</div></div>`;
-    }).join("");
-    return `<div class="hint">Read-only view of who is on each session, with swaps applied.</div>${dayStrip(d, false, "rosterStrip")}${rows}`;
+  function numRec(s) { return ((data.numbers || {})[ui.numbersDay] || {})[String(s)] || null; }
+  function numHas(s) { const r = numRec(s); return !!(r && (("participants" in r) || ("engagement" in r))); }
+  function numVal(s, field) { const r = numRec(s); const n = r ? Number(r[field]) : NaN; return Number.isFinite(n) ? n : null; }
+  function numDayHas(d) { return !!Object.keys((data.numbers || {})[d] || {}).length; }
+  function numSet(s, field, value) {
+    const key = String(s);
+    if (!data.numbers) data.numbers = {};
+    if (!data.numbers[ui.numbersDay]) data.numbers[ui.numbersDay] = {};
+    const rec = Object.assign({}, data.numbers[ui.numbersDay][key] || {});
+    rec[field] = clampCount(value);
+    data.numbers[ui.numbersDay][key] = rec;
+    save();
   }
+  function numClear(s) {
+    const key = String(s);
+    if (!data.numbers || !data.numbers[ui.numbersDay]) return;
+    delete data.numbers[ui.numbersDay][key];
+    if (!Object.keys(data.numbers[ui.numbersDay]).length) delete data.numbers[ui.numbersDay];
+    save();
+  }
+  function numTotals() {
+    let p = 0, e = 0;
+    for (let s = 1; s <= SESS.length; s++) { p += numVal(s, "participants") || 0; e += numVal(s, "engagement") || 0; }
+    return { p, e, t: p + e };
+  }
+  function refreshNumTotals() {
+    const t = numTotals();
+    const p = document.getElementById("dayTotalP");
+    const e = document.getElementById("dayTotalE");
+    const c = document.getElementById("dayTotalC");
+    if (p) p.textContent = String(t.p);
+    if (e) e.textContent = String(t.e);
+    if (c) c.textContent = String(t.t);
+  }
+  function renderNumbers() {
+    const day = ui.numbersDay;
+    const counted = SESS.filter((_, i) => numHas(i + 1)).length;
+    const t = numTotals();
+    const rClass = d => (ui.numbersDay === d ? "on" : "") + (numDayHas(d) ? " has" : "");
+    const strip = `<div class="days" id="numbersStrip">${DATES.map(d => `<button class="${rClass(d)}" data-day="${d}"><small>${dow(d)}${d === today ? " · today" : ""}</small><b>${Number(d.slice(8))}</b></button>`).join("")}</div>`;
+    const cards = SESS.map((pair, i) => {
+      const s = i + 1;
+      const r = resolve(day, s);
+      const names = (r.people || []).map(p => p && p.name).filter(Boolean);
+      const teamName = r.team && r.team.name ? r.team.name : "";
+      const who = names.length ? names.join(" · ") : (teamName || "No team assigned");
+      const countedS = numHas(s);
+      const pv = numVal(s, "participants");
+      const ev = numVal(s, "engagement");
+      const counter = (field, ar, en, value) => {
+        const shown = value == null ? "" : String(value);
+        return `<div class="counter" data-s="${s}" data-field="${field}">
+          <div class="clabel"><span class="ar">${ar}</span><span class="en">${en}</span></div>
+          <div class="step">
+            <button type="button" data-act="ndec" data-s="${s}" data-field="${field}" aria-label="Decrease ${en}">−</button>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="${shown}" placeholder="0" aria-label="${en}">
+            <button type="button" data-act="ninc" data-s="${s}" data-field="${field}" aria-label="Increase ${en}">+</button>
+          </div>
+        </div>`;
+      };
+      return `<div class="card sess-card ${countedS ? "counted" : ""}" data-s="${s}">
+        <div class="sess-top">
+          <div class="num">${s}</div>
+          <div>
+            <div class="time">${sessTime(i)} <small>${pair[0]}–${pair[1]}</small></div>
+            <div class="who">${teamName ? `<b>${esc(teamName)}</b> · ` : ""}${esc(who)}</div>
+          </div>
+          <div class="badge ${countedS ? "" : "wait"}">${countedS ? "Counted" : "Not yet"}</div>
+        </div>
+        <div class="counters">
+          ${counter("participants", "المشاركون", "Participants", pv)}
+          ${counter("engagement", "التفاعل", "Engagement", ev)}
+        </div>
+        ${countedS ? `<div class="clear"><button class="btn danger small" data-act="nclear" data-s="${s}">Clear this session</button></div>` : ""}
+      </div>`;
+    }).join("");
+    return `<div class="hint">Correct participants and engagement for any day. Facilitators use /clicker to count only today.</div>
+      ${strip}
+      <div class="nbar">
+        <div class="grow"><b style="color:#fff">${dow(day)} ${Number(day.slice(8))} Nov</b> · ${counted} of ${SESS.length} sessions counted</div>
+        <input type="date" id="numbersDate" min="${DATES[0]}" max="${DATES[DATES.length - 1]}" value="${day}">
+      </div>
+      <div class="card day-total" id="dayTotal">
+        <div class="dt-label"><div class="ar">مجموع اليوم</div><div class="en">Daily total</div></div>
+        <div class="dt-stats">
+          <div class="dt-stat p"><div class="n" id="dayTotalP">${t.p}</div><div class="lbl"><span class="ar">المشاركون</span><span class="en">Participants</span></div></div>
+          <div class="dt-stat e"><div class="n" id="dayTotalE">${t.e}</div><div class="lbl"><span class="ar">التفاعل</span><span class="en">Engagement</span></div></div>
+          <div class="dt-stat c"><div class="n" id="dayTotalC">${t.t}</div><div class="lbl"><span class="ar">المجموع الكلي</span><span class="en">Total</span></div></div>
+        </div>
+      </div>
+      ${cards}`;
+  }
+  function numBump(s, field, delta) {
+    const cur = numVal(s, field);
+    const next = clampCount((cur == null ? 0 : cur) + delta);
+    numSet(s, field, next);
+    const input = app.querySelector(`.counter[data-s="${s}"][data-field="${field}"] input`);
+    if (input) input.value = String(next);
+    const card = app.querySelector(`.sess-card[data-s="${s}"]`);
+    const badge = card && card.querySelector(".badge");
+    if (card && numHas(s)) {
+      card.classList.add("counted");
+      if (badge) { badge.classList.remove("wait"); badge.textContent = "Counted"; }
+      if (!card.querySelector("[data-act=nclear]")) {
+        const wrap = document.createElement("div");
+        wrap.className = "clear";
+        wrap.innerHTML = `<button class="btn danger small" data-act="nclear" data-s="${s}">Clear this session</button>`;
+        wrap.querySelector("button").onclick = () => { numClear(s); render(); };
+        card.appendChild(wrap);
+      }
+    }
+    const dayBtn = app.querySelector(`#numbersStrip button[data-day="${ui.numbersDay}"]`);
+    if (dayBtn && numDayHas(ui.numbersDay)) dayBtn.classList.add("has");
+    const grow = app.querySelector(".nbar .grow");
+    if (grow) {
+      const counted = SESS.filter((_, i) => numHas(i + 1)).length;
+      grow.innerHTML = `<b style="color:#fff">${dow(ui.numbersDay)} ${Number(ui.numbersDay.slice(8))} Nov</b> · ${counted} of ${SESS.length} sessions counted`;
+    }
+    refreshNumTotals();
+  }
+  function bindNumStep(btn, fn) {
+    let hold = null, rep = null;
+    const start = ev => { ev.preventDefault(); fn(); hold = setTimeout(() => { rep = setInterval(fn, 90); }, 380); };
+    const stop = () => { clearTimeout(hold); clearInterval(rep); hold = rep = null; };
+    btn.addEventListener("pointerdown", start);
+    ["pointerup", "pointercancel", "pointerleave"].forEach(ev => btn.addEventListener(ev, stop));
+  }
+
 
   // ---------- Avatar picker ----------
   let avatarTarget = null;
@@ -660,7 +836,26 @@
     });
 
     app.querySelectorAll("#dayStrip [data-day]").forEach(b => b.onclick = () => { ui.day = b.dataset.day; ui.swapping = null; render(); });
-    app.querySelectorAll("#rosterStrip [data-day]").forEach(b => b.onclick = () => { ui.rosterDay = b.dataset.day; render(); });
+    app.querySelectorAll("#numbersStrip [data-day]").forEach(b => b.onclick = () => { ui.numbersDay = b.dataset.day; render(); });
+    const nd = document.getElementById("numbersDate");
+    if (nd) nd.onchange = () => { if (DATES.includes(nd.value)) { ui.numbersDay = nd.value; render(); } };
+    app.querySelectorAll("[data-act=ninc]").forEach(b => bindNumStep(b, () => numBump(Number(b.dataset.s), b.dataset.field, 1)));
+    app.querySelectorAll("[data-act=ndec]").forEach(b => bindNumStep(b, () => numBump(Number(b.dataset.s), b.dataset.field, -1)));
+    app.querySelectorAll(".counter input").forEach(inp => {
+      const field = inp.closest(".counter").dataset.field;
+      const s = Number(inp.closest(".counter").dataset.s);
+      const apply = () => {
+        const raw = inp.value.trim();
+        if (raw === "") return;
+        if (!/^\d+$/.test(raw)) { const cur = numVal(s, field); inp.value = cur == null ? "" : String(cur); return; }
+        numSet(s, field, raw);
+        inp.value = String(numVal(s, field));
+        numBump(s, field, 0);
+      };
+      inp.addEventListener("change", apply);
+      inp.addEventListener("blur", apply);
+    });
+    app.querySelectorAll("[data-act=nclear]").forEach(b => b.onclick = () => { numClear(Number(b.dataset.s)); render(); });
     const od = document.getElementById("offDate");
     if (od) od.onchange = () => {
       const v = od.value;

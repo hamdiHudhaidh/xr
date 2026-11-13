@@ -47,285 +47,168 @@
     z-index: 0;
     background:
       radial-gradient(ellipse 50% 36% at 78% 10%, rgba(255, 230, 180, 0.16), transparent 62%),
-      radial-gradient(ellipse 70% 40% at 50% 100%, rgba(240, 74, 154, 0.22), transparent 70%),
-      radial-gradient(ellipse 55% 38% at 18% 86%, rgba(122, 43, 191, 0.28), transparent 70%),
-      linear-gradient(180deg, #070314 0%, #12062e 38%, #2a0f6e 68%, #5a1a7a 86%, #8a2a6e 100%);
+      radial-gradient(ellipse 70% 40% at 50% 100%, rgba(240, 74, 154, 0.12), transparent 70%),
+      radial-gradient(ellipse 55% 38% at 18% 86%, rgba(122, 43, 191, 0.16), transparent 70%),
+      linear-gradient(180deg, #070314 0%, #12062e 32%, #1a0a3a 52%, #162016 78%, #1a140e 100%);
     pointer-events: none;
   }
-  #stars {
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-  }
+  #stars { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
   #stars i {
-    position: absolute;
-    display: block;
-    border-radius: 50%;
-    background: #fff;
+    position: absolute; display: block; border-radius: 50%; background: #fff;
     box-shadow: 0 0 6px rgba(255,255,255,0.8);
     animation: twinkle 3.4s ease-in-out infinite;
   }
-  @keyframes twinkle {
-    0%, 100% { opacity: 0.35; }
-    50% { opacity: 1; }
-  }
+  @keyframes twinkle { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
   .moon {
-    position: fixed;
-    z-index: 1;
-    top: 5.5%;
-    right: 9%;
-    width: 7.2vmin;
-    height: 7.2vmin;
-    border-radius: 50%;
+    position: fixed; z-index: 1; top: 5.5%; right: 9%;
+    width: 7.2vmin; height: 7.2vmin; border-radius: 50%;
     background: radial-gradient(circle at 35% 35%, #fff8e4, #e8d9a8 55%, #cbb87a 100%);
     box-shadow: 0 0 3.5vmin 1.2vmin rgba(255, 230, 170, 0.22), 0 0 8vmin 2vmin rgba(234, 240, 74, 0.08);
     pointer-events: none;
   }
   .moon::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
+    content: ""; position: absolute; inset: 0; border-radius: 50%;
     background: radial-gradient(circle at 68% 40%, transparent 42%, rgba(11, 5, 32, 0.18) 80%);
   }
   .buildings {
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: 8%;
-    height: 38%;
-    z-index: 2;
-    pointer-events: none;
+    position: fixed; left: 0; right: 0; top: 5%; height: 36%;
+    z-index: 2; pointer-events: none;
   }
   .buildings .b {
-    position: absolute;
-    object-fit: contain;
-    object-position: bottom center;
+    position: absolute; object-fit: contain; object-position: bottom center;
     filter: brightness(0.8) saturate(0.8);
     pointer-events: none;
   }
   .buildings .ithra {
-    left: 1%;
-    bottom: 0;
-    height: 100%;
-    width: 44%;
+    left: 1%; bottom: 8%; height: 100%; width: 44%;
     object-position: left bottom;
     filter: brightness(0.8) saturate(0.8) drop-shadow(0 1.2vmin 2.4vmin rgba(40, 70, 140, 0.35));
   }
-  .buildings .iktva {
-    right: 1%;
-    bottom: 2%;
-    height: 58%;
-    width: 48%;
+  .buildings .expo {
+    right: 1%; bottom: 10%; height: 58%; width: 48%;
     object-position: right bottom;
     filter: brightness(0.8) saturate(0.8) drop-shadow(0 1.2vmin 2.4vmin rgba(40, 70, 140, 0.35));
   }
-  .ground {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 55%;
-    z-index: 3;
+  #woods {
+    position: fixed; inset: 0; z-index: 3; pointer-events: none; overflow: hidden;
+  }
+  #woods .tree {
+    position: absolute;
+    bottom: auto;
+    transform-origin: 50% 100%;
+    object-fit: contain;
+    object-position: bottom center;
     pointer-events: none;
+    filter: drop-shadow(0 0.4vmin 0.8vmin rgba(0,0,0,0.45));
+  }
+  .ground {
+    position: fixed; left: 0; right: 0; bottom: 0; height: 56%;
+    z-index: 4; pointer-events: none;
     background:
-      radial-gradient(ellipse 70% 55% at 50% 100%, rgba(255, 120, 40, 0.22), transparent 58%),
-      linear-gradient(180deg, transparent 0%, rgba(18, 8, 36, 0.55) 12%, #160a28 38%, #12081e 100%);
+      radial-gradient(ellipse 52% 36% at 50% 78%, rgba(110, 72, 36, 0.55), transparent 68%),
+      radial-gradient(ellipse 80% 55% at 50% 100%, rgba(28, 18, 10, 0.96), transparent 72%),
+      linear-gradient(180deg, transparent 0%, rgba(16, 28, 12, 0.45) 10%, #1c2414 24%, #2a2014 48%, #24180f 78%, #1a120c 100%);
   }
   .ground::before {
     content: "";
-    position: absolute;
-    left: -5%;
-    right: -5%;
-    top: 8%;
-    height: 18%;
-    background: radial-gradient(ellipse at center, rgba(28, 12, 48, 0.9), transparent 70%);
+    position: absolute; left: -8%; right: -8%; top: 0; height: 22%;
+    background: radial-gradient(ellipse at center, rgba(10, 16, 8, 0.55), transparent 70%);
   }
-  .brand {
-    position: fixed;
-    z-index: 12;
-    top: 2.2%;
-    left: 2.4%;
-    pointer-events: none;
+  .ground::after {
+    content: "";
+    position: absolute; left: 12%; right: 12%; top: 28%; bottom: 2%;
+    background: radial-gradient(ellipse at 50% 55%, rgba(92, 60, 28, 0.42), rgba(50, 34, 16, 0.18) 48%, transparent 72%);
   }
-  .brand .kicker {
-    font-weight: 800;
-    letter-spacing: 0.18em;
-    font-size: 1.25vmin;
-    color: var(--yellow);
-    text-transform: uppercase;
+  #floor { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+  #floor .leaf {
+    position: absolute; width: 1.1vmin; height: 0.55vmin; border-radius: 0 70% 0 70%;
+    transform-origin: 50% 50%;
+    opacity: 0.72;
   }
-  .brand h1 {
-    display: flex;
-    align-items: baseline;
-    gap: 0.55em;
-    line-height: 1;
+  #floor .tuft {
+    position: absolute; width: 1.6vmin; height: 0.9vmin; border-radius: 50% 50% 40% 40%;
+    background: rgba(36, 64, 22, 0.45);
+    transform-origin: 50% 100%;
   }
-  .brand h1 .ar {
-    font-size: 3.2vmin;
-    font-weight: 800;
-    color: #fff;
-    direction: rtl;
-  }
-  .brand h1 .en {
-    font-size: 2.2vmin;
-    font-weight: 800;
-    color: var(--yellow);
-    letter-spacing: 0.06em;
-  }
+  .brand { position: fixed; z-index: 12; top: 2.2%; left: 2.4%; pointer-events: none; }
+  .brand .kicker { font-weight: 800; letter-spacing: 0.18em; font-size: 1.25vmin; color: var(--yellow); text-transform: uppercase; }
+  .brand h1 { display: flex; align-items: baseline; gap: 0.55em; line-height: 1; }
+  .brand h1 .ar { font-size: 3.2vmin; font-weight: 800; color: #fff; direction: rtl; }
+  .brand h1 .en { font-size: 2.2vmin; font-weight: 800; color: var(--yellow); letter-spacing: 0.06em; }
   .sky-totals {
-    position: fixed;
-    z-index: 12;
-    top: 3.2%;
-    left: 22%;
-    right: 22%;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 4.5vw;
+    position: fixed; z-index: 12; top: 3.2%; left: 22%; right: 22%;
+    display: flex; justify-content: center; align-items: flex-start; gap: 4.5vw;
     pointer-events: none;
   }
-  .constel {
-    text-align: center;
-    text-shadow: 0 0 1.6vmin rgba(255,255,255,0.28), 0 0.3vmin 1.2vmin rgba(10, 0, 40, 0.55);
-    min-width: 0;
-  }
-  .constel .n {
-    font-weight: 800;
-    font-size: 6.2vmin;
-    line-height: 0.92;
-    letter-spacing: -0.04em;
-    font-variant-numeric: tabular-nums;
-  }
+  .constel { text-align: center; text-shadow: 0 0 1.6vmin rgba(255,255,255,0.28), 0 0.3vmin 1.2vmin rgba(10, 0, 40, 0.55); min-width: 0; }
+  .constel .n { font-weight: 800; font-size: 6.2vmin; line-height: 0.92; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
   .constel.p .n { color: var(--lilac); }
   .constel.e .n { color: var(--yellow); }
   .constel.c .n { color: #fff; font-size: 6.8vmin; }
-  .constel .lbl {
-    margin-top: 0.3vh;
-    display: flex;
-    justify-content: center;
-    align-items: baseline;
-    gap: 0.5em;
-  }
-  .constel .lbl .ar {
-    font-weight: 800;
-    font-size: 1.55vmin;
-    direction: rtl;
-  }
-  .constel .lbl .en {
-    font-weight: 700;
-    font-size: 1.05vmin;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    opacity: 0.88;
-  }
+  .constel .lbl { margin-top: 0.3vh; display: flex; justify-content: center; align-items: baseline; gap: 0.5em; }
+  .constel .lbl .ar { font-weight: 800; font-size: 1.55vmin; direction: rtl; }
+  .constel .lbl .en { font-weight: 700; font-size: 1.05vmin; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.88; }
   .constel.p .lbl { color: var(--lilac); }
   .constel.e .lbl { color: var(--yellow); }
   .constel.c .lbl { color: #fff; }
-  #plots {
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    z-index: 6;
-    pointer-events: none;
+  #piles3d {
+    position: fixed; inset: 0; z-index: 5; width: 100%; height: 100%;
+    display: block; pointer-events: none;
   }
+  #plots { position: fixed; inset: 0; z-index: 6; pointer-events: none; }
   .plot {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    transform-origin: 50% 100%;
-    pointer-events: none;
+    position: absolute; display: flex; flex-direction: column; align-items: center;
+    transform-origin: 50% 100%; pointer-events: none;
   }
-  .plot .floated {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 0.15vh;
-  }
+  .plot .floated { display: flex; flex-direction: column; align-items: center; margin-bottom: 0.15vh; }
   .plot .day-tot {
-    font-weight: 800;
-    font-size: 1.7vmin;
-    line-height: 1;
-    color: rgba(255,255,255,0.22);
+    font-weight: 800; font-size: 2.55vmin; line-height: 1; color: #fff;
     font-variant-numeric: tabular-nums;
-    margin-bottom: 0.15vh;
+    margin-bottom: 0.4vh;
+    padding: 0.28vmin 1.05vmin;
+    border-radius: 999px;
+    background: rgba(6, 3, 16, 0.88);
+    box-shadow: 0 0 0.2vmin rgba(255,255,255,0.28), 0 0 1.2vmin rgba(6,3,16,0.95);
   }
-  .plot .pair {
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 0.35vw;
-  }
-  .pile {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+  .plot .pair { display: flex; align-items: flex-end; justify-content: center; gap: 0.45vw; }
+  .pile { display: flex; flex-direction: column; align-items: center; }
   .pile .val {
-    font-weight: 800;
-    font-size: 1.25vmin;
-    line-height: 1;
-    margin-bottom: 0.25vh;
+    font-weight: 800; font-size: 2.35vmin; line-height: 1;
     font-variant-numeric: tabular-nums;
-    text-shadow: 0 0 0.5vmin rgba(28, 10, 77, 0.9);
+    padding: 0.28vmin 0.95vmin;
+    border-radius: 999px;
+    background: rgba(6, 3, 16, 0.88);
+    box-shadow: 0 0 0.2vmin rgba(255,255,255,0.25), 0 0 1.1vmin rgba(6,3,16,0.95);
   }
-  .pile.p .val { color: var(--lilac); }
+  .pile.p .val { color: #e4d0ff; }
   .pile.e .val { color: var(--yellow); }
-  .stack {
-    position: relative;
-    flex: none;
-  }
-  .stack img {
-    position: absolute;
-    left: 0;
-    display: block;
-    pointer-events: none;
-    filter: drop-shadow(0 0.15vmin 0.2vmin rgba(0,0,0,0.4));
-  }
   .plot .shadow {
-    width: 78%;
-    height: 1.1vmin;
-    margin-top: -0.15vh;
-    border-radius: 50%;
-    background: radial-gradient(ellipse at center, rgba(0,0,0,0.5), transparent 70%);
+    width: 78%; height: 1.1vmin; margin-top: 0.15vh; border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.55), transparent 70%);
   }
   .plot.empty .pad {
-    width: 3.4vmin;
-    height: 1.5vmin;
-    border: 0.12vmin dashed rgba(234, 240, 74, 0.28);
+    width: 4.6vmin; height: 2vmin;
+    border: 0.16vmin dashed rgba(234, 240, 74, 0.4);
     border-radius: 50%;
-    background: rgba(234, 240, 74, 0.05);
+    background: rgba(234, 240, 74, 0.08);
     margin-top: 0.2vh;
   }
   .plot .day-lbl {
-    margin-top: 0.25vh;
-    font-weight: 700;
-    font-size: 1.05vmin;
-    letter-spacing: 0.04em;
-    color: rgba(255,255,255,0.42);
-    line-height: 1;
-    text-transform: uppercase;
+    margin-top: 0.45vh;
+    font-weight: 800; font-size: 1.85vmin; letter-spacing: 0.04em;
+    color: #fff; line-height: 1; text-transform: uppercase;
+    padding: 0.2vmin 0.85vmin;
+    border-radius: 999px;
+    background: rgba(6, 3, 16, 0.82);
+    box-shadow: 0 0 0.15vmin rgba(255,255,255,0.2), 0 0 0.8vmin rgba(6,3,16,0.8);
   }
-  .plot.today .day-lbl { color: var(--yellow); font-weight: 800; }
+  .plot.today .day-lbl { color: var(--yellow); }
   .camp {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 40%;
-    z-index: 8;
-    pointer-events: none;
+    position: fixed; left: 0; right: 0; bottom: 0; height: 52%;
+    z-index: 8; pointer-events: none;
   }
   .fire-glow {
-    position: absolute;
-    left: 50%;
-    bottom: 2%;
-    width: 46vmin;
-    height: 22vmin;
+    position: absolute; left: 50%; bottom: 18%; width: 46vmin; height: 22vmin;
     transform: translateX(-50%);
     background: radial-gradient(ellipse at 50% 80%, rgba(255, 140, 40, 0.55), rgba(255, 80, 20, 0.12) 42%, transparent 70%);
     filter: blur(8px);
@@ -337,86 +220,61 @@
     50% { opacity: 1; transform: translateX(-50%) scale(1.06); }
   }
   #fire {
-    position: absolute;
-    left: 50%;
-    bottom: 7.2%;
-    width: 12.8vmin;
-    height: auto;
+    position: absolute; left: 50%; bottom: 14.8%;
+    width: 12.8vmin; height: auto;
     transform: translateX(-50%);
-    z-index: 40;
-    pointer-events: none;
+    z-index: 40; pointer-events: none;
   }
   #fire .frame {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 12.8vmin;
-    height: auto;
-    display: block;
-    opacity: 0;
+    position: absolute; left: 0; bottom: 0; width: 12.8vmin; height: auto;
+    display: block; opacity: 0;
     filter: drop-shadow(0 0 1.4vmin rgba(255, 140, 40, 0.55));
   }
   #fire .frame:first-child { position: relative; }
   #fire .frame.on { opacity: 1; }
-  #team {
-    position: absolute;
-    inset: 0;
-  }
+  #team { position: fixed; inset: 0; z-index: 9; pointer-events: none; }
   .member {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    position: absolute; display: flex; flex-direction: column; align-items: center;
     transform: translate(-50%, -100%);
     pointer-events: none;
   }
   .member .av {
-    flex: none;
-    transform-origin: 50% 100%;
+    flex: none; transform-origin: 50% 100%;
     animation: sway 3.2s ease-in-out infinite;
     will-change: transform;
   }
   .member .av.photo {
-    object-fit: contain;
-    object-position: center bottom;
-    background: transparent;
-    border: 0;
-    box-shadow: none;
+    object-fit: contain; object-position: center bottom;
+    background: transparent; border: 0; box-shadow: none;
   }
   .member .av.fallback {
-    border-radius: 50%;
-    border: 0.2vmin solid rgba(255,255,255,0.85);
-    background: #5a3a9a;
-    color: #fff;
-    font-weight: 800;
-    display: grid;
-    place-items: center;
-    line-height: 1;
+    border-radius: 50%; border: 0.2vmin solid rgba(255,255,255,0.85);
+    background: #5a3a9a; color: #fff; font-weight: 800;
+    display: grid; place-items: center; line-height: 1;
   }
   .av-name {
-    width: 100%;
-    text-align: center;
-    color: var(--yellow);
+    width: max-content; min-width: 100%; max-width: none;
+    text-align: center; color: var(--yellow);
     font-family: Cairo, "Noto Sans Arabic", "Segoe UI", system-ui, sans-serif;
-    font-weight: 700;
-    line-height: 1.15;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    unicode-bidi: plaintext;
-    flex: none;
-    text-shadow: 0 0.15vmin 0.5vmin rgba(10,0,30,0.85);
+    font-weight: 700; line-height: 1.15; white-space: nowrap;
+    overflow: visible; unicode-bidi: plaintext;
+    flex: none; text-shadow: 0 0.15vmin 0.5vmin rgba(10,0,30,0.85);
   }
   @keyframes sway {
     0%, 100% { transform: rotate(-3.2deg); }
     50% { transform: rotate(3.2deg); }
   }
+  @keyframes sway-flip {
+    0%, 100% { transform: scaleX(-1) rotate(-3.2deg); }
+    50% { transform: scaleX(-1) rotate(3.2deg); }
+  }
   .member.sit .av { animation-duration: 4.4s; }
+  .member.flip .av { animation-name: sway-flip; transform: scaleX(-1); }
   @media (max-aspect-ratio: 3/4) {
     .sky-totals { left: 4%; right: 4%; gap: 3vw; top: 8%; }
     .brand { top: 1.4%; }
     .buildings .ithra { width: 70%; height: 70%; }
-    .buildings .iktva { width: 70%; height: 40%; }
+    .buildings .expo { width: 70%; height: 40%; }
   }
 </style>
 </head>
@@ -426,9 +284,11 @@
   <div class="moon" aria-hidden="true"></div>
   <div class="buildings">
     <img class="b ithra" src="../assets/bg-ithra.png" alt="Ithra">
-    <img class="b iktva" src="../assets/bg-iktva.png" alt="iktva">
+    <img class="b expo" src="../assets/bg-expo.png" alt="Expo">
   </div>
-  <div class="ground"></div>
+  <div id="woods" aria-hidden="true"></div>
+  <div class="ground"><div id="floor"></div></div>
+  <canvas id="piles3d"></canvas>
   <header class="brand">
     <div class="kicker">XR Hub</div>
     <h1><span class="ar">المؤشرات</span><span class="en">KPI</span></h1>
@@ -444,12 +304,13 @@
       <img class="frame" src="../assets/bonfire-flame-3.png" alt="">
     </div>
   </section>
+  <script src="vendor/three.min.js"></script>
+  <script src="piles3d.js"></script>
   <script src="../config.js"></script>
   <script>
   (function () {
     "use strict";
     const API = window.XR_API;
-    const U = 25;
     const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const AVATAR_PALETTE = [
       { bg: "#EAF04A", fg: "#2a0f6e" },
@@ -461,12 +322,17 @@
       { bg: "#7bd389", fg: "#0c2e14" },
       { bg: "#ff6b6b", fg: "#3a0a0a" }
     ];
-    const SRC_P = "../assets/chibi-headset.png";
-    const SRC_EB = "../assets/chibi-block-black.png";
-    const SRC_EW = "../assets/chibi-block-white.png";
-    const ASPECT_H = 117 / 160;
-    const ASPECT_C = ((148 + 149) / 2) / 160;
-    const OVERLAP = 0.225;
+    const TREE_SRC = [
+      { src: "../assets/tree-1.png", aspect: 325 / 500 },
+      { src: "../assets/tree-2.png", aspect: 371 / 500 },
+      { src: "../assets/tree-3.png", aspect: 323 / 500 },
+      { src: "../assets/tree-4.png", aspect: 373 / 500 }
+    ];
+    const LEAF_COLORS = ["#6a3a14", "#4a2e10", "#7a4a1c", "#3d4a1c", "#5a2810", "#8a5a22", "#2e3a16"];
+
+    if (new URLSearchParams(location.search).get("embed") === "1") {
+      document.documentElement.classList.add("embed");
+    }
 
     let data = null;
     let avatars = {};
@@ -582,10 +448,6 @@
         return (h >>> 0) / 4294967296;
       };
     }
-    function iconCount(v) {
-      if (!(v > 0)) return 0;
-      return Math.max(1, Math.round(v / U));
-    }
     function sitUrl(name) {
       return "../assets/sit-" + String(name || "").trim().toLowerCase().replace(/\s+/g, "-") + ".png";
     }
@@ -598,12 +460,77 @@
       let html = "";
       for (let i = 0; i < 110; i++) {
         const x = (rng() * 100).toFixed(2);
-        const y = (rng() * 58).toFixed(2);
+        const y = (rng() * 52).toFixed(2);
         const s = (0.7 + rng() * 2.1).toFixed(2);
         const delay = (rng() * 3.4).toFixed(2);
         const dur = (2.6 + rng() * 2.4).toFixed(2);
         const o = (0.35 + rng() * 0.65).toFixed(2);
         html += '<i style="left:' + x + '%;top:' + y + '%;width:' + s + 'px;height:' + s + 'px;animation-delay:' + delay + 's;animation-duration:' + dur + 's;opacity:' + o + '"></i>';
+      }
+      root.innerHTML = html;
+    }
+
+    function plantTrees() {
+      const root = document.getElementById("woods");
+      const W = window.innerWidth || 1920;
+      const H = window.innerHeight || 1080;
+      const sig = W + "x" + H;
+      if (root.dataset.sig === sig) return;
+      root.dataset.sig = sig;
+      const rng = seedRng("woods:kpi-scene:v2");
+      const rows = [
+        { count: 17, foot: 0.448, hMin: 0.20, hMax: 0.29, b0: 0.60, b1: 0.70, z: 1 },
+        { count: 11, foot: 0.492, hMin: 0.26, hMax: 0.36, b0: 0.74, b1: 0.85, z: 2 },
+        { count: 4,  foot: 0.545, hMin: 0.30, hMax: 0.40, b0: 0.82, b1: 0.90, z: 4, sides: true }
+      ];
+      let html = "";
+      rows.forEach((row, ri) => {
+        for (let i = 0; i < row.count; i++) {
+          const kind = TREE_SRC[Math.floor(rng() * TREE_SRC.length)];
+          const flip = rng() < 0.5;
+          const h = (row.hMin + rng() * (row.hMax - row.hMin)) * H;
+          const w = h * kind.aspect;
+          let x;
+          if (row.sides) {
+            const left = i < row.count / 2;
+            const t = left ? (i / Math.max(row.count / 2, 1)) : ((i - Math.ceil(row.count / 2)) / Math.max(Math.floor(row.count / 2), 1));
+            x = left ? (0.01 + t * 0.13) * W + (rng() - 0.5) * 20 : (0.86 + t * 0.13) * W + (rng() - 0.5) * 20;
+          } else {
+            const t = (i + 0.5 + (rng() - 0.5) * 0.35) / row.count;
+            x = t * W;
+          }
+          const y = row.foot * H + (rng() - 0.5) * 10;
+          const bright = row.b0 + rng() * (row.b1 - row.b0);
+          const scaleX = flip ? -1 : 1;
+          html += '<img class="tree" src="' + kind.src + '" alt="" style="left:' + x.toFixed(1) + "px;top:" + y.toFixed(1) + "px;height:" + h.toFixed(1) + "px;width:" + w.toFixed(1) + "px;transform:translate(-50%,-100%) scaleX(" + scaleX + ");filter:brightness(" + bright.toFixed(2) + ") drop-shadow(0 0.4vmin 0.8vmin rgba(0,0,0,0.45));z-index:" + (row.z + i) + '">';
+        }
+      });
+      root.innerHTML = html;
+    }
+
+    function plantLeaves() {
+      const root = document.getElementById("floor");
+      const W = window.innerWidth || 1920;
+      const H = (window.innerHeight || 1080) * 0.56;
+      const sig = W + "x" + Math.round(H);
+      if (root.dataset.sig === sig) return;
+      root.dataset.sig = sig;
+      const rng = seedRng("floor:kpi-scene:v1");
+      let html = "";
+      for (let i = 0; i < 90; i++) {
+        const x = rng() * 100;
+        const y = 18 + rng() * 80;
+        const rot = (rng() * 360).toFixed(1);
+        const s = (0.7 + rng() * 1.6).toFixed(2);
+        const c = LEAF_COLORS[Math.floor(rng() * LEAF_COLORS.length)];
+        html += '<i class="leaf" style="left:' + x.toFixed(2) + "%;top:" + y.toFixed(2) + "%;background:" + c + ";transform:rotate(" + rot + "deg) scale(" + s + ')"></i>';
+      }
+      for (let i = 0; i < 36; i++) {
+        const x = rng() * 100;
+        const y = 8 + rng() * 50;
+        const rot = ((rng() - 0.5) * 50).toFixed(1);
+        const s = (0.8 + rng() * 1.4).toFixed(2);
+        html += '<i class="tuft" style="left:' + x.toFixed(2) + "%;top:" + y.toFixed(2) + "%;transform:rotate(" + rot + "deg) scale(" + s + ')"></i>';
       }
       root.innerHTML = html;
     }
@@ -618,21 +545,14 @@
         '<div class="constel c"><div class="n">' + fmt(p + e) + '</div><div class="lbl"><span class="ar">المجموع الكلي</span><span class="en">Total</span></div></div>';
     }
 
-    function stackHtml(kind, value, ymd, iconW, iconH, step) {
-      const n = iconCount(value);
-      const h = n <= 0 ? 0 : (n === 1 ? iconH : iconH + (n - 1) * step);
-      const rng = seedRng(kind + ":" + ymd + ":" + String(U));
-      let html = '<div class="stack" style="width:' + iconW.toFixed(1) + 'px;height:' + h.toFixed(1) + 'px">';
-      for (let i = 0; i < n; i++) {
-        const side = (i % 2 === 0 ? -1 : 1) * (rng() < 0.18 ? -1 : 1);
-        const dx = side * (2 + rng() * 3);
-        const rot = side * (3 + rng() * 1);
-        const src = kind === "p" ? SRC_P : (i % 2 === 0 ? SRC_EB : SRC_EW);
-        const bottom = i * step;
-        html += '<img src="' + src + '" alt="" style="width:' + iconW.toFixed(1) + 'px;height:' + iconH.toFixed(1) + 'px;bottom:' + bottom.toFixed(1) + 'px;left:' + dx.toFixed(1) + 'px;transform:rotate(' + rot.toFixed(2) + 'deg);transform-origin:50% 80%;z-index:' + i + '">';
-      }
-      html += "</div>";
-      return html;
+    function ensurePiles() {
+      const api = window.XRPiles3D;
+      if (!api) return false;
+      if (api.ready()) return true;
+      const canvas = document.getElementById("piles3d");
+      if (!api.init(canvas)) return false;
+      api.start();
+      return true;
     }
 
     function renderPlots() {
@@ -643,39 +563,42 @@
       const W = window.innerWidth || 1920;
       const H = window.innerHeight || 1080;
       const n = days.length;
-      const padX = W * 0.035;
-      const usable = W - padX * 2;
-      const slot = usable / Math.max(n, 1);
-      const iconH = Math.max(16, Math.min(30, slot * 0.34));
-      const iconWp = iconH / ASPECT_H;
-      const iconWe = iconH / ASPECT_C;
-      const step = iconH * (1 - OVERLAP);
-      const baseY = H * 0.618;
+      const padX = W * 0.04;
+      const slot = (W - padX * 2) / Math.max(n, 1);
+      const baseY = H * 0.675;
+      const slots = days.map((ymd, i) => {
+        const rec = byDay[ymd] || { participants: 0, engagement: 0 };
+        return { ymd: ymd, index: i, participants: rec.participants || 0, engagement: rec.engagement || 0 };
+      });
+      let meta = [];
+      if (ensurePiles()) meta = window.XRPiles3D.update(slots) || [];
+      const by = {};
+      meta.forEach(m => { by[m.ymd] = m; });
       let html = "";
       days.forEach((ymd, i) => {
-        const t = n === 1 ? 0.5 : i / (n - 1);
-        const recede = Math.abs(t - 0.5) * 2;
-        const scale = 1 - 0.14 * recede;
-        const x = padX + slot * i + slot / 2;
-        const y = baseY - recede * recede * (H * 0.028);
         const rec = byDay[ymd];
         const p = dayParts(ymd);
         const isToday = ymd === today;
         const filled = !!(rec && (rec.participants > 0 || rec.engagement > 0 || rec.total > 0));
+        const m = by[ymd];
+        const t = n === 1 ? 0.5 : i / (n - 1);
+        const recede = Math.abs(t - 0.5) * 2;
+        const x = m ? (filled ? m.topX : m.groundX) : (padX + slot * i + slot / 2);
+        const y = m ? (filled ? m.topY : m.groundY) : baseY;
         let inner = "";
         if (filled) {
           inner += '<div class="floated">';
-          inner += '<div class="day-tot">' + fmt(rec.total) + '</div>';
+          inner += '<div class="day-tot">' + fmt(rec.total) + "</div>";
           inner += '<div class="pair">';
-          inner += '<div class="pile p"><div class="val">' + fmt(rec.participants) + '</div>' + stackHtml("p", rec.participants, ymd, iconWp, iconH, step) + "</div>";
-          inner += '<div class="pile e"><div class="val">' + fmt(rec.engagement) + '</div>' + stackHtml("e", rec.engagement, ymd, iconWe, iconH, step) + "</div>";
+          inner += '<div class="pile p"><div class="val">' + fmt(rec.participants) + "</div></div>";
+          inner += '<div class="pile e"><div class="val">' + fmt(rec.engagement) + "</div></div>";
           inner += "</div></div>";
           inner += '<div class="shadow"></div>';
         } else {
           inner += '<div class="pad"></div>';
         }
         inner += '<div class="day-lbl">' + p.day + "</div>";
-        html += '<div class="plot' + (isToday ? " today" : "") + (filled ? "" : " empty") + '" style="left:' + x.toFixed(1) + "px;top:" + y.toFixed(1) + "px;width:" + (slot * 0.96).toFixed(1) + "px;transform:translate(-50%,-100%) scale(" + scale.toFixed(3) + ");z-index:" + Math.round((1 - recede) * 20) + '">' + inner + "</div>";
+        html += '<div class="plot' + (isToday ? " today" : "") + (filled ? "" : " empty") + '" data-day="' + ymd + '" style="left:' + x.toFixed(1) + "px;top:" + y.toFixed(1) + "px;width:" + (slot * 0.96).toFixed(1) + 'px;transform:translate(-50%,-100%);z-index:' + Math.round((1 - recede) * 20) + '">' + inner + "</div>";
       });
       root.innerHTML = html;
     }
@@ -757,73 +680,65 @@
       }
     }
 
+    function nativeFace(name) {
+      const n = String(name || "").trim().toLowerCase();
+      if (n === "hamdi" || n === "muneera") return "right";
+      if (n === "modi" || n === "mohammed" || n === "sara" || n === "maram") return "left";
+      return "front";
+    }
+    function needFace(ang) {
+      const d = ang * 180 / Math.PI;
+      if (d < -20) return "right";
+      if (d > 20) return "left";
+      return "front";
+    }
     function seatAngles(names) {
-      // 0° is behind the fire (up the screen). Negative = left of fire, positive = right.
-      // Right-facing sitters go on the left so they look toward the flames;
-      // left-facing sitters go on the right; front-facing sitters form the back row.
-      const planned = [
-        { re: /^hamdi$/i, ang: -88 },
-        { re: /^muneera$/i, ang: -125 },
-        { re: /^omar$/i, ang: -28 },
-        { re: /^shatha$/i, ang: 0 },
-        { re: /^joud$/i, ang: 28 },
-        { re: /^mohammed$/i, ang: 46 },
-        { re: /^sara$/i, ang: 90 },
-        { re: /^maram$/i, ang: 118 },
-        { re: /^modi$/i, ang: 128 }
-      ];
+      const preferred = ["Muneera", "Hamdi", "Modi", "Omar", "Shatha", "Joud", "Mohammed", "Sara", "Maram"];
       const used = new Set();
-      const seats = [];
-      names.forEach(name => {
-        const hit = planned.find(p => p.re.test(name) && !used.has(p.re));
-        if (hit) {
-          used.add(hit.re);
-          seats.push({ name: name, ang: hit.ang * Math.PI / 180 });
-        }
+      const order = [];
+      preferred.forEach(p => {
+        const hit = names.find(n => n.toLowerCase() === p.toLowerCase() && !used.has(n));
+        if (hit) { order.push(hit); used.add(hit); }
       });
-      const leftovers = names.filter(n => !seats.some(s => s.name === n));
-      if (leftovers.length) {
-        const taken = seats.map(s => s.ang).sort((a, b) => a - b);
-        const a0 = -125 * Math.PI / 180, a1 = 128 * Math.PI / 180;
-        leftovers.forEach((name, i) => {
-          let ang = a0 + ((i + 1) / (leftovers.length + 1)) * (a1 - a0);
-          // nudge away from occupied seats
-          taken.forEach(t => {
-            if (Math.abs(ang - t) < 0.18) ang += (ang >= t ? 0.2 : -0.2);
-          });
-          seats.push({ name: name, ang: ang });
-        });
-      }
-      seats.sort((a, b) => a.ang - b.ang);
-      return seats;
+      names.forEach(n => { if (!used.has(n)) order.push(n); });
+      const N = order.length;
+      const a0 = -155 * Math.PI / 180, a1 = 155 * Math.PI / 180;
+      return order.map((name, i) => {
+        const ang = N <= 1 ? 0 : a0 + (i / (N - 1)) * (a1 - a0);
+        const nat = nativeFace(name);
+        const need = needFace(ang);
+        const flip = (nat === "left" || nat === "right") && need !== "front" && nat !== need;
+        return { name: name, ang: ang, flip: flip };
+      });
     }
 
     function renderTeam() {
       const root = document.getElementById("team");
       root.innerHTML = "";
       const names = roster();
-      const camp = document.querySelector(".camp").getBoundingClientRect();
-      const W = camp.width || window.innerWidth;
-      const H = camp.height || window.innerHeight * 0.40;
       const seats = seatAngles(names);
       if (!seats.length) return;
-      const fireX = W * 0.5;
-      const fireY = H * 0.835;
-      const rx = Math.min(W * 0.345, 660);
-      const ry = Math.min(H * 0.34, 140);
+      const W = window.innerWidth || 1920;
+      const H = window.innerHeight || 1080;
+      const fireBox = document.getElementById("fire").getBoundingClientRect();
+      const fireX = fireBox.left + fireBox.width / 2;
+      const fireY = fireBox.bottom;
+      const rx = Math.min(W * 0.38, 720);
+      const ry = Math.min(H * 0.168, 190);
       const yMax = H - 8;
       seats.forEach((seat, i) => {
         const ang = seat.ang;
         const name = seat.name;
         const x = fireX + rx * Math.sin(ang);
-        const y = Math.min(yMax, fireY - ry * Math.cos(ang) * 0.95);
-        const scale = 0.80 + 0.26 * (1 - (Math.cos(ang) + 1) / 2);
-        const avH = Math.max(88, Math.min(200, 160 * scale));
+        const y = Math.min(yMax, fireY - ry * Math.cos(ang));
+        const depth = (1 - Math.cos(ang)) / 2;
+        const scale = 0.74 + 0.34 * depth;
+        const avH = Math.max(100, Math.min(250, 176 * scale));
         const avW = avH * 0.72;
-        const namePx = Math.max(10, Math.min(16, avH * 0.09));
-        const z = 30 + Math.round((1 - Math.cos(ang)) * 40);
+        const namePx = Math.max(11, Math.min(18, avH * 0.095));
+        const z = 20 + Math.round(depth * 55);
         const cell = document.createElement("div");
-        cell.className = "member";
+        cell.className = "member" + (seat.flip ? " flip" : "");
         cell.style.left = x.toFixed(1) + "px";
         cell.style.top = y.toFixed(1) + "px";
         cell.style.width = avW.toFixed(1) + "px";
@@ -842,6 +757,10 @@
         nm.title = name;
         nm.style.marginTop = "0.25vh";
         nm.style.fontSize = namePx.toFixed(1) + "px";
+        const deg = Math.abs(ang * 180 / Math.PI);
+        if (deg > 55 && deg < 130) {
+          nm.style.transform = "translateX(" + (ang < 0 ? "-18px" : "18px") + ")";
+        }
         cell.appendChild(nm);
         root.appendChild(cell);
       });
@@ -876,6 +795,8 @@
       if (!force && sig === lastSig) return;
       lastSig = sig;
       paintStars();
+      plantTrees();
+      plantLeaves();
       renderSkyTotals(days);
       renderPlots();
       renderTeam();
@@ -898,6 +819,9 @@
           data = { teams: [], numbers: {} };
           avatars = {};
           lastSig = "";
+          paintStars();
+          plantTrees();
+          plantLeaves();
           renderSkyTotals([]);
           renderPlots();
           renderTeam();
@@ -917,6 +841,8 @@
     }
     startFire();
     paintStars();
+    plantTrees();
+    plantLeaves();
     load();
     setInterval(load, 45000);
   })();
