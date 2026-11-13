@@ -1,4 +1,4 @@
-/* Exact-count 3D heaps: one Quest 3 headset per combined daily total. */
+/* Heaps: one Quest 3 headset per 5 combined daily units (ceil). */
 (function (global) {
   "use strict";
   const CAP = 20000;
@@ -14,6 +14,13 @@
   let lastSig = "";
   const ORIGIN_Z = 6.22;
   let SPAN = 8.4;
+  const UNITS_PER_HEADSET = 5;
+
+  function heapCount(total) {
+    const n = Math.max(0, Math.floor(Number(total) || 0));
+    return n > 0 ? Math.ceil(n / UNITS_PER_HEADSET) : 0;
+  }
+
 
   function seedRng(str) {
     let h = 2166136261;
@@ -96,10 +103,10 @@
     brow.translate(0, 0.50, -0.10);
     const cushion = roundedBoxGeom(THREE, 0.80, 0.34, 0.20, 0.08);
     cushion.translate(0, 0.22, 0.30);
-    const armL = roundedBoxGeom(THREE, 0.16, 0.16, 0.72, 0.07);
-    armL.translate(-0.46, 0.26, 0.16);
-    const armR = roundedBoxGeom(THREE, 0.16, 0.16, 0.72, 0.07);
-    armR.translate(0.46, 0.26, 0.16);
+    const armL = roundedBoxGeom(THREE, 0.20, 0.18, 0.86, 0.08);
+    armL.translate(-0.50, 0.28, 0.22);
+    const armR = roundedBoxGeom(THREE, 0.20, 0.18, 0.86, 0.08);
+    armR.translate(0.50, 0.28, 0.22);
     const rear = roundedBoxGeom(THREE, 0.78, 0.14, 0.16, 0.06);
     rear.translate(0, 0.28, 0.50);
     const body = mergeBufferGeometries(THREE, [shell, brow, cushion, armL, armR, rear]);
@@ -121,81 +128,49 @@
     return { body: body, visor: visor };
   }
 
-  /* Rounded mound: wide base, dome top (stretched ellipsoid).
-     Base radius is clamped so neighbouring days keep a ground gap;
-     large counts grow taller, not wider. */
+  /* Loose layered mound: wide-ish base, rounded crown, slot-clamped radius. */
   function settleDome(n, itemR, maxR, maxH, seed) {
     const empty = { pos: [], R: 0, H: 0 };
     if (n <= 0) return empty;
-    const capR = Math.max(itemR * 1.15, maxR);
+    const capR = Math.max(itemR * 0.18, maxR);
+    const rng = seedRng(seed);
+    const perLayer = capR >= itemR * 0.85 ? 3 : capR >= itemR * 0.45 ? 2 : 1;
+    const layers = Math.max(1, Math.ceil(n / perLayer));
+    let yStep = itemR * 0.7;
+    if (maxH > 0) {
+      const need = (layers - 1) * yStep + itemR * 1.15;
+      if (need > maxH) yStep = Math.max(itemR * 0.4, (maxH - itemR * 1.15) / Math.max(1, layers - 1));
+    }
 
-    function generate(H, spacing, yStep, rng) {
-      const pts = [];
-      const y0 = itemR * 0.12;
-      for (let y = y0; y <= H + itemR * 0.02; y += yStep) {
-        const t = Math.min(1, Math.max(0, (y - y0) / Math.max(H - y0, itemR)));
-        /* Ellipsoid slice: full at the base, rounded at the crown. */
-        const layerR = capR * Math.sqrt(Math.max(0, 1 - t * t));
-        const rings = layerR < spacing * 0.42 ? 0 : Math.max(1, Math.round(layerR / spacing));
-        for (let k = 0; k <= rings; k++) {
-          const rad = rings === 0 ? 0 : (k / rings) * layerR;
-          const count = rad < spacing * 0.42 ? 1 : Math.max(1, Math.round((2 * Math.PI * rad) / spacing));
-          const rot = rng() * Math.PI * 2;
-          for (let i = 0; i < count; i++) {
-            const a = rot + (i + (rng() - 0.5) * 0.07) * (2 * Math.PI / Math.max(count, 1));
-            const rr = count === 1 ? rad * (0.15 + rng() * 0.2) : Math.max(0, rad + (rng() - 0.5) * spacing * 0.07);
-            const x = Math.cos(a) * rr;
-            const z = Math.sin(a) * rr;
-            if (Math.hypot(x, z) > capR * 0.99) continue;
-            pts.push({
-              x: x,
-              y: y + (rng() - 0.5) * itemR * 0.06,
-              z: z,
-              rx: (rng() - 0.5) * 0.7,
-              ry: rng() * Math.PI * 2,
-              rz: (rng() - 0.5) * 0.4,
-              s: 0.94 + rng() * 0.14,
-              faceCam: rng() < 0.88
-            });
-          }
-        }
+    const pts = [];
+    let placed = 0;
+    for (let layer = 0; placed < n && layer < 80; layer++) {
+      const tNorm = layers <= 1 ? 0 : Math.min(1, layer / (layers - 1));
+      /* Keep a full base for most of the height; round off only the crown. */
+      const taper = Math.max(0, (tNorm - 0.5) / 0.5);
+      const layerR = capR * Math.sqrt(Math.max(0, 1 - taper * taper));
+      let count;
+      if (layerR < itemR * 0.42) count = 1;
+      else if (layerR < itemR * 0.9) count = Math.min(2, n - placed);
+      else count = Math.min(n - placed, Math.max(2, Math.round((2 * Math.PI * layerR) / (itemR * 1.12))));
+      count = Math.max(1, Math.min(count, n - placed));
+      const rot = rng() * Math.PI * 2;
+      const y = itemR * 0.08 + layer * yStep;
+      for (let i = 0; i < count && placed < n; i++) {
+        const a = rot + (i / count) * Math.PI * 2 + (rng() - 0.5) * 0.18;
+        const rad = count === 1 ? rng() * layerR * 0.22 : layerR * (0.7 + rng() * 0.24);
+        pts.push({
+          x: Math.cos(a) * rad,
+          y: y + (rng() - 0.5) * yStep * 0.1,
+          z: Math.sin(a) * rad,
+          rx: (rng() - 0.5) * 0.22,
+          ry: (rng() - 0.5) * (rng() < 0.28 ? 1.15 : 0.75),
+          rz: (rng() - 0.5) * 0.16,
+          s: 0.94 + rng() * 0.12,
+          faceCam: true
+        });
+        placed++;
       }
-      pts.sort(function (a, b) {
-        const da = a.x * a.x + a.z * a.z, db = b.x * b.x + b.z * b.z;
-        return a.y - b.y || da - db;
-      });
-      return pts;
-    }
-
-    let spacing = itemR * 1.72;
-    let yStep = itemR * 0.88;
-    /* Half-ellipsoid volume ≈ 2/3 π R² H. */
-    let H = Math.max(
-      itemR * 2.2,
-      (1.5 * n * spacing * spacing * yStep) / (Math.PI * capR * capR)
-    );
-    if (maxH > 0) H = Math.min(H, maxH);
-
-    function pack() {
-      return generate(H, spacing, yStep, seedRng(seed));
-    }
-
-    let pts = pack();
-    let guard = 0;
-    while (pts.length < n && guard++ < 16) {
-      if (maxH > 0 && H >= maxH * 0.98) {
-        spacing *= 0.91;
-        yStep *= 0.93;
-      } else {
-        H *= 1.14;
-        if (maxH > 0) H = Math.min(H, maxH);
-      }
-      pts = pack();
-    }
-    while (pts.length < n && spacing > itemR * 0.9 && guard++ < 28) {
-      spacing *= 0.9;
-      yStep *= 0.92;
-      pts = pack();
     }
 
     const pos = pts.slice(0, n);
@@ -204,16 +179,20 @@
       maxY = Math.max(maxY, pos[i].y);
       maxRad = Math.max(maxRad, Math.hypot(pos[i].x, pos[i].z));
     }
+    if (maxH > 0 && maxY > maxH && maxY > 0) {
+      const s = maxH / maxY;
+      for (let i = 0; i < pos.length; i++) pos[i].y *= s;
+      maxY = maxH;
+    }
     return { pos: pos, R: Math.min(capR, Math.max(itemR, maxRad)), H: Math.max(itemR, maxY) };
   }
 
   function radiusForCount(n, itemR, maxR) {
-    const spacing = itemR * 1.72;
-    const yStep = itemR * 0.88;
-    const vol = Math.max(1, n) * spacing * spacing * yStep;
-    /* Dome with H ≈ 0.95 R: volume ≈ 2/3 π R³ * 0.95. Prefer a wide mound. */
-    const R = Math.cbrt(vol / 1.99);
-    return Math.min(maxR, Math.max(itemR * 1.5, R));
+    const per = n >= 8 ? 3 : n >= 3 ? 2 : 1;
+    const layers = Math.max(1, Math.ceil(Math.max(1, n) / per));
+    const H = layers * itemR * 0.7;
+    const R = Math.max(itemR * 1.05, H * 0.55);
+    return Math.min(maxR, R);
   }
 
   function init(el) {
@@ -321,9 +300,9 @@
         const dx = camera.position.x - (wx + p.x);
         const dy = camera.position.y - p.y;
         const dz = camera.position.z - (wz + p.z);
-        const yaw = Math.atan2(dx, -dz);
-        const pitch = -Math.atan2(dy, Math.hypot(dx, dz) || 1) * 0.42;
-        dummy.rotation.set(pitch + (p.rx || 0) * 0.18, yaw + (p.ry || 0) * 0.2, (p.rz || 0) * 0.16);
+        const yaw = Math.atan2(dx, -dz) + (p.ry || 0);
+        const pitch = -Math.atan2(dy, Math.hypot(dx, dz) || 1) * 0.32;
+        dummy.rotation.set(pitch + (p.rx || 0) * 0.22, yaw, (p.rz || 0) * 0.2);
       } else {
         dummy.rotation.set(p.rx || 0, p.ry || 0, p.rz || 0);
       }
@@ -358,7 +337,7 @@
   function update(slots) {
     if (!renderer) return [];
     resize();
-    const sig = JSON.stringify(slots.map(s => [s.ymd, s.participants || 0, s.engagement || 0, s.index, slots.length])) + "|v17";
+    const sig = JSON.stringify(slots.map(s => [s.ymd, s.participants || 0, s.engagement || 0, s.index, slots.length])) + "|v22";
     const size = (canvas.clientWidth || 0) + "x" + (canvas.clientHeight || 0);
     const full = sig + "|" + size;
     if (full === lastSig && heapMeta.length) return heapMeta;
@@ -372,33 +351,29 @@
     const W = canvas.clientWidth || global.innerWidth || 1920;
     const H = canvas.clientHeight || global.innerHeight || 1080;
     const slotW = span / n;
-    /* Diameter is 80% of the slot, leaving a visible ground gap between days. */
-    const maxR = slotW * 0.40;
-
     const mid = dayAnchor(Math.floor((n - 1) / 2), n, span);
     const groundPt = project(mid.wx, 0, mid.wz);
     const pxPerWorldY = Math.abs(groundPt.y - project(mid.wx, 1, mid.wz).y) || 1;
     const pxPerWorldX = Math.abs(project(mid.wx + 1, 0, mid.wz).x - groundPt.x) || 1;
-    const labelPad = 112;
+    const labelPad = 132;
     const maxHpx = Math.max(48, groundPt.y - SAFE.top * H - labelPad);
     const maxHworld = maxHpx / pxPerWorldY;
 
-    /* Keep pieces readable at 1024px (~14px there, ~26px on a 1920 canvas). */
-    const targetPx = Math.max(24, Math.min(34, W * 0.015));
-    let instScale = targetPx / pxPerWorldX;
-    if (instScale > maxR * 0.95) instScale = maxR * 0.95;
-    instScale = Math.max(instScale, 0.04);
+    /* About 2.5–3× the previous 24–34px pieces, so the Quest 3 silhouette reads. */
+    const targetPx = Math.max(56, Math.min(80, W * 0.038));
+    let instScale = Math.max(0.05, targetPx / pxPerWorldX);
     const itemR = instScale / 2.05;
+    /* Tight centre disk so large, slightly-turned headsets still leave a gap. */
+    const maxR = Math.min(slotW * 0.33, itemR * 0.95);
 
-    const busiest = Math.max(0, ...slots.map(s => (s.participants || 0) + (s.engagement || 0)));
+    const busiest = Math.max(0, ...slots.map(s => heapCount((s.participants || 0) + (s.engagement || 0))));
     let fitScale = instScale;
     if (busiest > 0) {
       const trial = settleDome(busiest, itemR, maxR, 0, "fit");
       if (trial.H > maxHworld && trial.H > 0) {
-        /* Prefer a slightly denser/taller-capped pack over shrinking pieces. */
         const capped = settleDome(busiest, itemR, maxR, maxHworld, "fit");
         if (capped.pos.length < busiest) {
-          const shrink = Math.max(0.85, maxHworld / trial.H);
+          const shrink = Math.max(0.9, maxHworld / trial.H);
           fitScale = instScale * shrink;
         }
       }
@@ -423,13 +398,14 @@
       };
       if (filled) {
         const total = pN + eN;
-        const pileR = radiusForCount(total, packR, maxR);
-        const mound = settleDome(total, packR, pileR, maxHworld, "h:" + s.ymd);
+        const heads = heapCount(total);
+        const pileR = radiusForCount(heads, packR, maxR);
+        const mound = settleDome(heads, packR, pileR, maxHworld, "h:" + s.ymd);
         writeInstances(meshBody, mound.pos, a.wx, a.wz, instScale, true, 1.08, 1.0, 1.0);
         writeInstances(meshVisor, mound.pos, a.wx, a.wz, instScale, true, 1.08, 1.0, 1.0);
-        writeShadow(a.wx, a.wz, mound.R);
-        const top = project(a.wx, mound.H + packR * 0.75, a.wz);
-        rec.heap = { n: total, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: mound.H, R: mound.R };
+        writeShadow(a.wx, a.wz, Math.max(mound.R, packR * 1.05));
+        const top = project(a.wx, mound.H + packR * 0.85, a.wz);
+        rec.heap = { n: heads, total: total, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: mound.H, R: mound.R };
         rec.p = { n: pN, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: mound.H };
         rec.e = { n: eN, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: mound.H };
       }

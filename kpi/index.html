@@ -136,10 +136,23 @@
   .brand h1 .ar { font-size: 3.2vmin; font-weight: 800; color: #fff; direction: rtl; }
   .brand h1 .en { font-size: 2.2vmin; font-weight: 800; color: var(--yellow); letter-spacing: 0.06em; }
   .sky-totals {
-    position: fixed; z-index: 12; top: 3.2%; left: 22%; right: 22%;
-    display: flex; justify-content: center; align-items: flex-start; gap: 4.5vw;
+    position: fixed; z-index: 12; top: 3.2%; left: 18%; right: 18%;
+    display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
+    gap: 0.7vh;
     pointer-events: none;
   }
+  .constel-row {
+    display: flex; justify-content: center; align-items: flex-start; gap: 4.5vw; width: 100%;
+  }
+  .pile-legend {
+    display: flex; justify-content: center; align-items: baseline; gap: 0.7em;
+    color: rgba(255,255,255,0.86);
+    text-shadow: 0 0.25vmin 1vmin rgba(10, 0, 40, 0.7);
+  }
+  .pile-legend .ar { font-weight: 800; font-size: 1.5vmin; display: inline-flex; align-items: baseline; gap: 0.28em; direction: ltr; unicode-bidi: isolate; }
+  .pile-legend .ar .eq { font-weight: 700; }
+  .pile-legend .sep { opacity: 0.55; font-weight: 700; font-size: 1.2vmin; }
+  .pile-legend .en { font-weight: 700; font-size: 1.2vmin; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.9; }
   .constel { text-align: center; text-shadow: 0 0 1.6vmin rgba(255,255,255,0.28), 0 0.3vmin 1.2vmin rgba(10, 0, 40, 0.55); min-width: 0; }
   .constel .n { font-weight: 800; font-size: 6.2vmin; line-height: 0.92; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
   .constel.p .n { color: var(--lilac); }
@@ -286,7 +299,8 @@
   .member.sit .av { animation-duration: 4.4s; }
   .member.flip .av { animation-name: sway-flip; transform: scaleX(-1); }
   @media (max-aspect-ratio: 3/4) {
-    .sky-totals { left: 4%; right: 4%; gap: 3vw; top: 8%; }
+    .sky-totals { left: 4%; right: 4%; top: 8%; }
+    .constel-row { gap: 3vw; }
     .brand { top: 1.4%; }
     .buildings .ithra { width: 78%; height: 88%; }
     .buildings .expo { width: 78%; height: 58%; }
@@ -557,9 +571,12 @@
       const p = days.reduce((s, d) => s + d.participants, 0);
       const e = days.reduce((s, d) => s + d.engagement, 0);
       el.innerHTML =
+        '<div class="constel-row">' +
         '<div class="constel p"><div class="n">' + fmt(p) + '</div><div class="lbl"><span class="ar">المشاركون</span><span class="en">Participants</span></div></div>' +
         '<div class="constel e"><div class="n">' + fmt(e) + '</div><div class="lbl"><span class="ar">التفاعل</span><span class="en">Engagement</span></div></div>' +
-        '<div class="constel c"><div class="n">' + fmt(p + e) + '</div><div class="lbl"><span class="ar">المجموع الكلي</span><span class="en">Total</span></div></div>';
+        '<div class="constel c"><div class="n">' + fmt(p + e) + '</div><div class="lbl"><span class="ar">المجموع الكلي</span><span class="en">Total</span></div></div>' +
+        '</div>' +
+        '<div class="pile-legend"><span class="en">1 headset = 5</span><span class="sep">·</span><span class="ar"><span>سماعة</span><span class="eq">=</span><span>5</span></span></div>';
     }
 
     function ensurePiles() {
@@ -700,7 +717,7 @@
     function nativeFace(name) {
       const n = String(name || "").trim().toLowerCase();
       if (n === "hamdi" || n === "muneera") return "right";
-      if (n === "modi" || n === "mohammed" || n === "sara" || n === "maram") return "left";
+      if (n === "modi" || n === "omar" || n === "mohammed" || n === "sara" || n === "maram") return "left";
       return "front";
     }
     function needFace(ang) {
