@@ -145,6 +145,7 @@
     }
     .team .lbl { font-weight: 600; color: rgba(255,255,255,0.72); letter-spacing: 0.06em; line-height: 1; }
     .team .nm { font-weight: 800; line-height: 1.05; white-space: nowrap; max-width: 100%; padding: 0 6%; overflow: hidden; text-overflow: ellipsis; }
+    .team .nm.members { white-space: normal; text-overflow: clip; padding: 0 9%; line-height: 1.1; font-weight: 700; }
     .team.past { border-color: rgba(255,255,255,0.25); color: #d6d3df; background: #3a3550; }
     @keyframes hlpulse {
       0%, 100% { box-shadow: 0 0 1vmin #EAF04A, 0 0 2.5vmin rgba(234,240,74,0.45), inset 0 0 1vmin rgba(234,240,74,0.25); }
@@ -357,7 +358,7 @@
       }
 
 
-      // ---- Finished sessions (greyed) and assigned team names ----
+      // ---- Finished sessions (greyed) and assigned member names ----
       const inEvent = ymd => ymd >= "2026-11-12" && ymd <= "2026-11-30";
       const pct = (v, total) => (v / total * 100) + "%";
       function place(el, i, x, y, w, h) {
@@ -386,21 +387,19 @@
         const unit = box.clientHeight / IMG_H; // screen px per poster px
         SESSIONS.forEach(([, b], i) => {
           const r = window.XR_resolve(teamData, now.ymd, i + 1);
-          if (!r.team || !r.team.name) return;
+          const names = (r.people || []).map(x => x.name).filter(Boolean);
+          if (!names.length) return;
           const el = document.createElement("div");
           el.className = "team" + (now.mins >= toMin(b) ? " past" : "");
           place(el, i, ARROW_X[i] - ZONE_W / 2, ZONE_TOP, ZONE_W, ZONE_H);
-          const lbl = document.createElement("div");
-          lbl.className = "lbl"; lbl.textContent = "TEAM · الفريق";
-          lbl.style.fontSize = 12 * unit + "px";
           const nm = document.createElement("div");
-          nm.className = "nm"; nm.textContent = r.team.name;
-          el.appendChild(lbl); el.appendChild(nm);
+          nm.className = "nm members"; nm.textContent = names.join(" · ");
+          el.appendChild(nm);
           teamLayer.appendChild(el);
-          // Largest font (30 poster px down to 17) that fits the chip width.
-          let fs = 30;
+          // Largest font (26 poster px down to 11) that fits the chip, wrapping to at most 2 lines.
+          let fs = 26;
           nm.style.fontSize = fs * unit + "px";
-          while (fs > 17 && nm.scrollWidth > nm.clientWidth + 1) { fs -= 1; nm.style.fontSize = fs * unit + "px"; }
+          while (fs > 11 && (nm.scrollWidth > nm.clientWidth + 1 || nm.scrollHeight > el.clientHeight * 0.9)) { fs -= 1; nm.style.fontSize = fs * unit + "px"; }
         });
       }
       async function loadTeams() {
