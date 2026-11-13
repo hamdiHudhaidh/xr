@@ -122,7 +122,7 @@
     text-transform: uppercase;
     margin-top: 2px;
   }
-  .dt-stats { display: flex; gap: 10px; flex: 2 1 280px; }
+  .dt-stats { display: flex; gap: 10px; flex: 2 1 320px; }
   .dt-stat {
     flex: 1;
     background: rgba(255,255,255,.07);
@@ -139,10 +139,17 @@
   }
   .dt-stat.p .n { color: #c4a0ff; }
   .dt-stat.e .n { color: var(--yellow); }
+  .dt-stat.c {
+    flex: 1.35;
+    background: rgba(234, 240, 74, 0.16);
+    border-color: rgba(234, 240, 74, 0.55);
+  }
+  .dt-stat.c .n { color: #fff; font-size: 34px; }
   .dt-stat .lbl { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
   .dt-stat .lbl .ar { font-family: Cairo, "Noto Sans Arabic", sans-serif; font-weight: 800; font-size: 13px; direction: rtl; }
   .dt-stat.p .lbl .ar, .dt-stat.p .lbl .en { color: #c4a0ff; }
   .dt-stat.e .lbl .ar, .dt-stat.e .lbl .en { color: var(--yellow); }
+  .dt-stat.c .lbl .ar, .dt-stat.c .lbl .en { color: #fff; }
   .dt-stat .lbl .en { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
   @media (max-width: 620px) {
     .wrap { padding: 10px 10px 80px; }
@@ -150,6 +157,7 @@
     .counters { grid-template-columns: 1fr; }
     .step button { width: 64px; height: 64px; }
     .day-total .dt-stat .n { font-size: 24px; }
+    .day-total .dt-stat.c .n { font-size: 28px; }
   }
 </style>
 </head>
@@ -338,7 +346,7 @@
       p += valOf(s, "participants") || 0;
       e += valOf(s, "engagement") || 0;
     }
-    return { p, e };
+    return { p, e, t: p + e };
   }
   function dayTotalHtml() {
     const t = dayTotals();
@@ -347,6 +355,7 @@
       <div class="dt-stats">
         <div class="dt-stat p"><div class="n" id="dayTotalP">${t.p}</div><div class="lbl"><span class="ar">المشاركون</span><span class="en">Participants</span></div></div>
         <div class="dt-stat e"><div class="n" id="dayTotalE">${t.e}</div><div class="lbl"><span class="ar">التفاعل</span><span class="en">Engagement</span></div></div>
+        <div class="dt-stat c"><div class="n" id="dayTotalC">${t.t}</div><div class="lbl"><span class="ar">المجموع الكلي</span><span class="en">Total</span></div></div>
       </div>
     </div>`;
   }
@@ -354,8 +363,10 @@
     const t = dayTotals();
     const p = document.getElementById("dayTotalP");
     const e = document.getElementById("dayTotalE");
+    const c = document.getElementById("dayTotalC");
     if (p) p.textContent = String(t.p);
     if (e) e.textContent = String(t.e);
+    if (c) c.textContent = String(t.t);
   }
 
   function render() {

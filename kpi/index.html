@@ -102,12 +102,12 @@
   }
   .totals {
     display: grid;
-    grid-template-columns: 1.15fr 1.15fr 0.7fr;
-    gap: 1.2vw;
+    grid-template-columns: 1fr 1fr 1.2fr 0.65fr;
+    gap: 1vw;
     flex: none;
   }
   .totals.with-today {
-    grid-template-columns: 1.05fr 1.05fr 1.35fr 0.65fr;
+    grid-template-columns: 0.9fr 0.9fr 1.15fr 1.45fr 0.6fr;
   }
   .stat {
     background: var(--card);
@@ -122,14 +122,19 @@
   }
   .stat .n {
     font-weight: 800;
-    font-size: 5.2vmin;
+    font-size: 4.8vmin;
     line-height: 0.95;
     letter-spacing: -0.03em;
     font-variant-numeric: tabular-nums;
   }
   .stat.p .n { color: var(--lilac); }
   .stat.e .n { color: var(--yellow); }
-  .stat.d .n { color: #fff; font-size: 4.4vmin; }
+  .stat.c {
+    background: rgba(234, 240, 74, 0.16);
+    border-color: var(--yellow);
+  }
+  .stat.c .n { color: #fff; font-size: 5.2vmin; }
+  .stat.d .n { color: #fff; font-size: 4.2vmin; }
   .stat.today {
     border-color: var(--yellow);
     background: rgba(234, 240, 74, 0.12);
@@ -137,13 +142,14 @@
   .stat.today .today-nums {
     display: flex;
     align-items: baseline;
-    gap: 1.2em;
+    gap: 0.9em;
     min-width: 0;
   }
   .stat.today .today-nums .pair { min-width: 0; }
-  .stat.today .n { font-size: 4.2vmin; }
+  .stat.today .n { font-size: 3.6vmin; }
   .stat.today .n.p { color: var(--lilac); }
   .stat.today .n.e { color: var(--yellow); }
+  .stat.today .n.c { color: #fff; font-size: 4.2vmin; }
   .stat .lbl {
     margin-top: 0.45vh;
     display: flex;
@@ -158,6 +164,7 @@
   }
   .stat.p .lbl .ar, .stat.p .lbl .en { color: var(--lilac); }
   .stat.e .lbl .ar, .stat.e .lbl .en { color: var(--yellow); }
+  .stat.c .lbl .ar, .stat.c .lbl .en { color: #fff; }
   .stat.d .lbl .ar, .stat.d .lbl .en { color: var(--muted); }
   .stat.today .lbl .ar { color: var(--yellow); }
   .stat.today .lbl .en { color: var(--yellow); }
@@ -327,14 +334,16 @@
   .day-card .nums {
     display: flex;
     justify-content: space-around;
-    gap: 0.3em;
+    align-items: flex-end;
+    gap: 0.25em;
   }
   .day-card .pair .n {
     font-weight: 800;
-    font-size: 1.9vmin;
+    font-size: 1.7vmin;
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
+  .day-card .pair.c .n { font-size: 2vmin; color: #fff; }
   .day-card .pair.p .n { color: var(--lilac); }
   .day-card .pair.e .n { color: var(--yellow); }
   .day-card .pair .l {
@@ -347,6 +356,7 @@
   }
   .day-card .pair.p .l { color: var(--lilac); }
   .day-card .pair.e .l { color: var(--yellow); }
+  .day-card .pair.c .l { color: #fff; }
   .team-wrap {
     flex: none;
     height: 25.5vh;
@@ -453,15 +463,16 @@
     50% { transform: rotate(6deg); }
   }
   @media (max-aspect-ratio: 3/4) {
-    .totals { grid-template-columns: 1fr 1fr; }
-    .stat.d { grid-column: 1 / -1; }
-    .stat .n { font-size: 6.2vmin; }
-    header h1 .ar { font-size: 5vmin; }
-    .totals.with-today { grid-template-columns: 1fr 1fr; }
+    .totals, .totals.with-today { grid-template-columns: 1fr 1fr; }
+    .stat .n { font-size: 5.4vmin; }
+    .stat.c .n { font-size: 5.8vmin; }
     .stat.today { grid-column: 1 / -1; }
+    .stat.today .n { font-size: 5vmin; }
+    .stat.today .n.c { font-size: 5.6vmin; }
+    header h1 .ar { font-size: 5vmin; }
     .team-wrap { height: 22vh; }
     .chart-head { flex-direction: column; align-items: flex-start; }
-    .day-card { min-width: 22vw; max-width: none; flex: 0 0 auto; }
+    .day-card { min-width: 26vw; max-width: none; flex: 0 0 auto; }
   }
 </style>
 </head>
@@ -590,7 +601,7 @@
           participants += rec.participants || 0;
           engagement += rec.engagement || 0;
         });
-        return { ymd, participants, engagement };
+        return { ymd, participants, engagement, total: participants + engagement };
       });
     }
     function roster() {
@@ -632,11 +643,13 @@
         ? ('<div class="stat today"><div class="today-nums">' +
            '<div class="pair"><div class="n p">' + fmt(td.participants) + '</div></div>' +
            '<div class="pair"><div class="n e">' + fmt(td.engagement) + '</div></div>' +
+           '<div class="pair"><div class="n c">' + fmt(td.total) + '</div></div>' +
            '</div><div class="lbl"><span class="ar">اليوم</span><span class="en">Today · ' + parts.day + ' ' + parts.mon + '</span></div></div>')
         : "";
       el.innerHTML =
         '<div class="stat p"><div class="n">' + fmt(p) + '</div><div class="lbl"><span class="ar">المشاركون</span><span class="en">Participants</span></div></div>' +
         '<div class="stat e"><div class="n">' + fmt(e) + '</div><div class="lbl"><span class="ar">التفاعل</span><span class="en">Engagement</span></div></div>' +
+        '<div class="stat c"><div class="n">' + fmt(p + e) + '</div><div class="lbl"><span class="ar">المجموع الكلي</span><span class="en">Total</span></div></div>' +
         todayCard +
         '<div class="stat d"><div class="n">' + fmt(days.length) + '</div><div class="lbl"><span class="ar">الأيام</span><span class="en">Days counted</span></div></div>';
     }
@@ -663,6 +676,7 @@
           '<div class="nums">' +
             '<div class="pair p"><div class="n">' + fmt(d.participants) + '</div><div class="l">م · P</div></div>' +
             '<div class="pair e"><div class="n">' + fmt(d.engagement) + '</div><div class="l">ت · E</div></div>' +
+            '<div class="pair c"><div class="n">' + fmt(d.total) + '</div><div class="l">كلي · Tot</div></div>' +
           '</div></div>';
       }).join("");
     }
