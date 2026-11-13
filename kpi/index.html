@@ -331,32 +331,16 @@
     margin: 0.08vh 0 0.2vh;
     color: #fff;
   }
-  .day-card .nums {
-    display: flex;
-    justify-content: space-around;
-    align-items: flex-end;
-    gap: 0.25em;
-  }
-  .day-card .pair .n {
+  .day-card .tot {
     font-weight: 800;
-    font-size: 1.7vmin;
+    font-size: 3.6vmin;
     line-height: 1;
     font-variant-numeric: tabular-nums;
-  }
-  .day-card .pair.c .n { font-size: 2vmin; color: #fff; }
-  .day-card .pair.p .n { color: var(--lilac); }
-  .day-card .pair.e .n { color: var(--yellow); }
-  .day-card .pair .l {
-    font-weight: 700;
-    font-size: 0.95vmin;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    letter-spacing: -0.03em;
+    color: #fff;
+    text-align: center;
     margin-top: 0.15vh;
-    opacity: 0.9;
   }
-  .day-card .pair.p .l { color: var(--lilac); }
-  .day-card .pair.e .l { color: var(--yellow); }
-  .day-card .pair.c .l { color: #fff; }
   .team-wrap {
     flex: none;
     height: 25.5vh;
@@ -673,11 +657,8 @@
         return '<div class="day-card' + (isToday ? " today" : "") + '">' +
           '<div class="dow">' + dow + '</div>' +
           '<div class="date">' + p.day + mon + '</div>' +
-          '<div class="nums">' +
-            '<div class="pair p"><div class="n">' + fmt(d.participants) + '</div><div class="l">م · P</div></div>' +
-            '<div class="pair e"><div class="n">' + fmt(d.engagement) + '</div><div class="l">ت · E</div></div>' +
-            '<div class="pair c"><div class="n">' + fmt(d.total) + '</div><div class="l">كلي · Tot</div></div>' +
-          '</div></div>';
+          '<div class="tot">' + fmt(d.total) + '</div>' +
+          '</div>';
       }).join("");
     }
 
