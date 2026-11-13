@@ -217,15 +217,34 @@
     color: var(--cream);
   }
   .legend .item { display: flex; align-items: center; gap: 0.45em; white-space: nowrap; }
-  .swatch {
-    width: 1.35em;
-    height: 1.35em;
-    border-radius: 0.35em;
+  .lico {
+    width: 1.85em;
+    height: 1.55em;
+    object-fit: contain;
+    object-position: center bottom;
     flex: none;
-    box-shadow: 0 0 0.4vmin rgba(0,0,0,0.25);
+    display: block;
+    filter: drop-shadow(0 0.15em 0.15em rgba(0,0,0,0.28));
   }
-  .swatch.p { background: var(--lilac); }
-  .swatch.e { background: var(--yellow); }
+  .lico-pair {
+    position: relative;
+    width: 2.15em;
+    height: 1.7em;
+    flex: none;
+  }
+  .lico-pair .lico {
+    position: absolute;
+    width: 1.4em;
+    height: 1.4em;
+  }
+  .lico-pair .lico:first-child { left: 0; bottom: 0; transform: rotate(-8deg); }
+  .lico-pair .lico:last-child { right: 0; bottom: 0.08em; transform: rotate(10deg); z-index: 1; }
+  .legend .scale {
+    color: var(--muted);
+    font-size: 1.15vmin;
+    letter-spacing: 0.02em;
+    font-weight: 700;
+  }
   #chart {
     flex: 1 1 auto;
     min-height: 0;
@@ -264,82 +283,6 @@
     font-size: 1.5vmin;
     font-weight: 600;
     max-width: 36em;
-  }
-  .daily-wrap {
-    flex: none;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.35vh;
-  }
-  .daily-head {
-    display: flex;
-    align-items: baseline;
-    gap: 0.7em;
-    flex: none;
-  }
-  .daily-head .ar {
-    font-weight: 800;
-    font-size: 1.8vmin;
-    direction: rtl;
-    color: #fff;
-  }
-  .daily-head .en {
-    font-weight: 700;
-    font-size: 1.1vmin;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .daily-row {
-    display: flex;
-    justify-content: center;
-    gap: 0.7vw;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-bottom: 0.2vh;
-    scrollbar-width: thin;
-  }
-  .day-card {
-    flex: 1 1 0;
-    min-width: 9vw;
-    max-width: 20vw;
-    background: var(--card);
-    border: 0.14vmin solid var(--line);
-    border-radius: 1.4vmin;
-    padding: 0.4vh 0.7vw 0.55vh;
-    box-shadow: 0 0.3vmin 1.2vmin rgba(10, 0, 40, 0.3);
-    text-align: center;
-  }
-  .day-card.today {
-    border-color: var(--yellow);
-    background: rgba(234, 240, 74, 0.12);
-  }
-  .day-card .dow {
-    font-weight: 700;
-    font-size: 1.05vmin;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    line-height: 1.2;
-  }
-  .day-card.today .dow { color: var(--yellow); font-weight: 800; }
-  .day-card .date {
-    font-weight: 800;
-    font-size: 1.55vmin;
-    line-height: 1.1;
-    margin: 0.08vh 0 0.2vh;
-    color: #fff;
-  }
-  .day-card .tot {
-    font-weight: 800;
-    font-size: 3.6vmin;
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.03em;
-    color: #fff;
-    text-align: center;
-    margin-top: 0.15vh;
   }
   .team-wrap {
     flex: none;
@@ -456,7 +399,6 @@
     header h1 .ar { font-size: 5vmin; }
     .team-wrap { height: 22vh; }
     .chart-head { flex-direction: column; align-items: flex-start; }
-    .day-card { min-width: 26vw; max-width: none; flex: 0 0 auto; }
   }
 </style>
 </head>
@@ -479,18 +421,12 @@
           <div class="en">By day</div>
         </div>
         <div class="legend">
-          <span class="item"><span class="swatch p"></span><span>المشاركون · Participants</span></span>
-          <span class="item"><span class="swatch e"></span><span>التفاعل · Engagement</span></span>
+          <span class="item"><img class="lico" src="../assets/chibi-headset.png" alt=""><span>المشاركون · Participants</span></span>
+          <span class="item"><span class="lico-pair"><img class="lico" src="../assets/chibi-block-black.png" alt=""><img class="lico" src="../assets/chibi-block-white.png" alt=""></span><span>التفاعل · Engagement</span></span>
+          <span class="item scale" id="scaleNote" hidden></span>
         </div>
       </div>
       <div id="chart"></div>
-    </section>
-    <section class="daily-wrap" id="dailyWrap" hidden>
-      <div class="daily-head">
-        <div class="ar">المجموع اليومي</div>
-        <div class="en">Daily totals</div>
-      </div>
-      <div class="daily-row" id="daily"></div>
     </section>
     <section class="team-wrap">
       <div class="team-title">
@@ -605,14 +541,24 @@
       if (v <= 0) return 10;
       const pow = Math.pow(10, Math.floor(Math.log10(v)));
       const n = v / pow;
-      const nice = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+      const nice = n <= 1 ? 1 : n <= 1.5 ? 1.5 : n <= 2 ? 2 : n <= 3 ? 3 : n <= 5 ? 5 : 10;
       return nice * pow;
     }
     function ticks(maxY) {
-      const steps = 4;
-      const out = [];
-      for (let i = 1; i <= steps; i++) out.push((maxY / steps) * i);
-      return out;
+      const candidates = [1, 2, 5, 10, 15, 20, 25, 50, 100, 200, 250, 500, 1000];
+      function tryRange(minN, maxN) {
+        for (let i = 0; i < candidates.length; i++) {
+          const s = candidates[i];
+          const n = maxY / s;
+          if (n >= minN && n <= maxN && Math.abs(n - Math.round(n)) < 1e-9) {
+            const out = [];
+            for (let v = s; v <= maxY + 1e-9; v += s) out.push(v);
+            return out;
+          }
+        }
+        return null;
+      }
+      return tryRange(3, 4) || tryRange(2, 6) || [maxY];
     }
 
     function renderTotals(days) {
@@ -638,53 +584,99 @@
         '<div class="stat d"><div class="n">' + fmt(days.length) + '</div><div class="lbl"><span class="ar">الأيام</span><span class="en">Days counted</span></div></div>';
     }
 
-    function renderDaily(days) {
-      const wrap = document.getElementById("dailyWrap");
-      const row = document.getElementById("daily");
-      if (!wrap || !row) return;
-      if (!days.length) {
-        wrap.hidden = true;
-        row.innerHTML = "";
-        return;
+    function seedRng(str) {
+      let h = 2166136261;
+      for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
       }
-      wrap.hidden = false;
-      const today = todayRiyadh();
-      row.innerHTML = days.map(d => {
-        const p = dayParts(d.ymd);
-        const mon = (p.mon !== "Nov") ? " " + p.mon : "";
-        const isToday = d.ymd === today;
-        const dow = isToday ? '<span class="ar">اليوم</span> · Today' : p.dow;
-        return '<div class="day-card' + (isToday ? " today" : "") + '">' +
-          '<div class="dow">' + dow + '</div>' +
-          '<div class="date">' + p.day + mon + '</div>' +
-          '<div class="tot">' + fmt(d.total) + '</div>' +
-          '</div>';
-      }).join("");
+      return function () {
+        h = Math.imul(h ^ (h >>> 15), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        h ^= h >>> 16;
+        return (h >>> 0) / 4294967296;
+      };
+    }
+    function pickUnit(maxVal, maxLayers) {
+      const raw = maxVal / Math.max(1, maxLayers);
+      const nice = [1, 2, 5, 10, 15, 20, 25, 50, 100, 200, 250, 500, 1000];
+      for (let i = 0; i < nice.length; i++) if (nice[i] >= raw - 1e-9) return nice[i];
+      return Math.ceil(raw);
     }
 
     function renderChart(days) {
       const el = document.getElementById("chart");
+      const scaleNote = document.getElementById("scaleNote");
+      function setScale(U) {
+        if (!scaleNote) return;
+        if (!U || U <= 1) {
+          scaleNote.hidden = true;
+          scaleNote.textContent = "";
+          return;
+        }
+        scaleNote.hidden = false;
+        scaleNote.textContent = "كل أيقونة = " + fmt(U) + " · Each icon = " + fmt(U);
+      }
       if (!days.length) {
+        setScale(0);
         el.innerHTML = '<div class="empty"><div class="ar">لا توجد أرقام بعد</div><div class="en">No numbers yet</div><p>Count participants and engagement on the Numbers page and they will appear here.</p></div>';
         return;
       }
       const rect = el.getBoundingClientRect();
       const W = Math.max(640, Math.round(rect.width) || 1200);
-      const H = Math.max(240, Math.round(rect.height) || 400);
-      const padL = 54, padR = 18, padT = 28, padB = 48;
+      const H = Math.max(280, Math.round(rect.height) || 480);
+      const padL = 54, padR = 22, padT = 42, padB = 50;
       const plotW = W - padL - padR;
       const plotH = H - padT - padB;
-      const maxY = niceMax(Math.max.apply(null, days.map(d => Math.max(d.participants, d.engagement))));
-      const yOf = v => padT + plotH * (1 - v / maxY);
+      const maxVal = Math.max.apply(null, days.map(d => Math.max(d.participants, d.engagement)).concat([0]));
       const n = days.length;
-      const maxGroup = 168;
+      const maxGroup = 200;
       const usedW = Math.min(plotW, n * maxGroup);
       const origin = padL + (plotW - usedW) / 2;
       const groupW = usedW / n;
-      const barW = Math.max(8, Math.min(48, groupW * 0.36));
-      const gap = Math.max(4, Math.min(12, barW * 0.24));
+      const pileGap = Math.max(8, Math.min(22, groupW * 0.08));
+      const maxPileW = Math.max(36, (groupW - pileGap) * 0.5);
+      const ASPECT_H = 117 / 160;
+      const ASPECT_C = ((148 + 149) / 2) / 160;
+      // Same icon height so both piles share a vertical scale. Headsets are wider.
+      const maxIconHByWidth = Math.min(maxPileW / 2.55 * ASPECT_H, maxPileW / 2.25 * ASPECT_C);
+      let iconH = Math.max(20, Math.min(72, maxIconHByWidth, plotH * 0.26));
+      const overlap = 0.225;
+      let step = iconH * (1 - overlap);
+      const availH = Math.max(40, plotH);
+      const maxLayers = Math.max(1, 1 + (availH - iconH) / step);
+      const U = pickUnit(Math.max(1, maxVal), maxLayers);
+      const maxY = niceMax(Math.max(maxVal, U));
+      // Fit the tallest pile into availH and keep overlap near 20–25%.
+      const nMax = Math.max(maxVal / U, 1);
+      if (nMax > 1) {
+        const target = availH * (maxVal / maxY);
+        const fitted = (target - iconH) / (nMax - 1);
+        if (fitted > iconH * 0.68 && fitted < iconH * 0.86) step = fitted;
+        else if (fitted <= iconH * 0.68) {
+          // Need a coarser scale / smaller icons so they nest without overflowing.
+          const needH = iconH + (nMax - 1) * (iconH * 0.75);
+          if (needH > availH) {
+            const scale = availH / needH;
+            iconH = Math.max(18, iconH * scale);
+            step = iconH * 0.75;
+          } else step = iconH * 0.75;
+        } else step = iconH * 0.80;
+      }
+      const iconWp = iconH / ASPECT_H;
+      const iconWe = iconH / ASPECT_C;
+      const wideOk = Math.min(iconWp, iconWe) >= 22 && maxPileW >= Math.max(iconWp, iconWe) * 1.55;
+      const yOf = v => padT + availH * (1 - v / maxY);
+      const pileH = function (v) {
+        if (v <= 0) return 0;
+        const layers = v / U;
+        if (layers <= 1) return iconH * layers;
+        return iconH + (layers - 1) * step;
+      };
       const labelFs = n > 14 ? 11 : n > 9 ? 13 : 15;
-      const valFs = n > 14 ? 11 : n > 9 ? 12 : 14;
+      const valFs = n > 14 ? 11 : n > 9 ? 13 : 15;
+
+      setScale(U);
 
       let grid = "";
       ticks(maxY).forEach(t => {
@@ -692,38 +684,119 @@
         grid += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y + '" y2="' + y + '" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>';
         grid += '<text x="' + (padL - 10) + '" y="' + (y + 4) + '" text-anchor="end" fill="rgba(255,255,255,0.62)" font-size="12" font-weight="700" font-family="Cairo, system-ui, sans-serif">' + fmt(t) + '</text>';
       });
-      grid += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + (padT + plotH) + '" y2="' + (padT + plotH) + '" stroke="rgba(234,240,74,0.35)" stroke-width="1.5"/>';
+      const baseY = padT + availH;
+      grid += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + baseY + '" y2="' + baseY + '" stroke="rgba(234,240,74,0.35)" stroke-width="1.5"/>';
 
-      let bars = "";
+      const SRC_P = "../assets/chibi-headset.png";
+      const SRC_EB = "../assets/chibi-block-black.png";
+      const SRC_EW = "../assets/chibi-block-white.png";
+
+      function layoutPile(kind, value, cx, iw, rng) {
+        const layersN = value / U;
+        const layerCount = Math.ceil(layersN - 1e-9);
+        const items = [];
+        if (value <= 0 || layerCount <= 0) return items;
+        const useWide = wideOk && layersN >= 2;
+        // Wide base, only the top one or two layers taper to a single peak.
+        const twoWide = useWide ? Math.max(1, layerCount - (layerCount >= 6 ? 2 : 1)) : 0;
+        for (let i = 0; i < layerCount; i++) {
+          const width = i < twoWide ? 2 : 1;
+          const sit = baseY - i * step;
+          const isTop = i === layerCount - 1;
+          const partial = (isTop && layersN < layerCount) ? Math.max(0.12, layersN - (layerCount - 1)) : 1;
+          let dropK = -1;
+          if (width === 2) dropK = rng() < 0.5 ? 0 : 1;
+          const rowShift = (i % 2 === 0 ? -1 : 1) * iw * (0.06 + rng() * 0.07);
+          for (let k = 0; k < width; k++) {
+            const amt = 0.10 + rng() * 0.10;
+            const rotAmt = 8 + rng() * 4;
+            const side = width === 2 ? (k === 0 ? -1 : 1) : ((i % 2 === 0 ? -1 : 1) * (rng() < 0.25 ? -1 : 1));
+            const dx = side * amt * iw;
+            const rot = side * rotAmt * (rng() < 0.2 ? -0.8 : 1);
+            let x;
+            if (width === 2) {
+              const sep = iw * 0.58;
+              x = cx + (k === 0 ? -sep : sep) - iw / 2 + dx * 0.7 + rowShift;
+            } else {
+              x = cx - iw / 2 + dx + rowShift * 0.5;
+            }
+            const drop = (k === dropK) ? iconH * (0.06 + rng() * 0.05) : 0;
+            const y = sit - iconH + drop;
+            items.push({
+              x: x,
+              y: y,
+              w: iw,
+              h: iconH,
+              rot: rot,
+              cx: x + iw / 2,
+              cy: y + iconH * 0.62,
+              partial: partial,
+              layer: i
+            });
+          }
+        }
+        return items;
+      }
+
+      function pileVisualTop(items, fallbackTop) {
+        if (!items.length) return fallbackTop;
+        let top = fallbackTop;
+        items.forEach(it => {
+          const rad = Math.abs(it.rot) * Math.PI / 180;
+          const ext = Math.sin(rad) * (it.w / 2) + (1 - Math.cos(rad)) * (it.h / 2);
+          const visibleTop = it.y + (1 - it.partial) * it.h;
+          top = Math.min(top, visibleTop - ext);
+        });
+        return top;
+      }
+
+      let defs = '<filter id="pileShade" x="-20%" y="-10%" width="140%" height="140%"><feDropShadow dx="0" dy="1.2" stdDeviation="1.1" flood-color="#000" flood-opacity="0.32"/></filter>';
+      let behind = "";
+      let piles = "";
+      let labels = "";
+
       days.forEach((d, i) => {
         const mid = origin + groupW * i + groupW / 2;
-        const xP = mid - gap / 2 - barW;
-        const xE = mid + gap / 2;
-        function bar(x, value, color, dark) {
-          const top = yOf(value);
-          const h = Math.max(2, padT + plotH - top);
-          const rx = Math.min(8, barW / 2);
-          // Rounded top, square bottom
-          const r = Math.min(rx, h / 2);
-          const path = 'M ' + x + ' ' + (top + h) +
-            ' V ' + (top + r) +
-            ' Q ' + x + ' ' + top + ' ' + (x + r) + ' ' + top +
-            ' H ' + (x + barW - r) +
-            ' Q ' + (x + barW) + ' ' + top + ' ' + (x + barW) + ' ' + (top + r) +
-            ' V ' + (top + h) + ' Z';
-          const ly = Math.max(12, top - 6);
-          return '<path d="' + path + '" fill="' + color + '"/>' +
-            '<text x="' + (x + barW / 2) + '" y="' + ly + '" text-anchor="middle" fill="' + dark + '" font-size="' + valFs + '" font-weight="800" font-family="Cairo, system-ui, sans-serif">' + fmt(value) + '</text>';
+        const half = Math.min(maxPileW, groupW * 0.42) / 2;
+        const cxP = mid - pileGap / 2 - half;
+        const cxE = mid + pileGap / 2 + half;
+
+        const taller = Math.max(d.participants, d.engagement);
+        const wmY = baseY - Math.max(pileH(taller) * 0.28, 22);
+        behind += '<text x="' + mid + '" y="' + wmY.toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.13)" font-size="' + Math.max(26, Math.min(groupW * 0.36, availH * 0.34, 88)).toFixed(1) + '" font-weight="800" font-family="Cairo, system-ui, sans-serif" font-variant-numeric="tabular-nums">' + fmt(d.total) + '</text>';
+
+        function drawSeries(kind, value, cx, iw, color) {
+          const rng = seedRng(kind + ":" + d.ymd + ":" + String(U));
+          const items = layoutPile(kind, value, cx, iw, rng);
+          const targetTop = baseY - pileH(value);
+          const clipId = "pc-" + kind + i;
+          if (items.length) {
+            const minX = Math.min.apply(null, items.map(it => it.x)) - 24;
+            const maxX = Math.max.apply(null, items.map(it => it.x + it.w)) + 24;
+            defs += '<clipPath id="' + clipId + '"><rect x="' + minX.toFixed(1) + '" y="' + targetTop.toFixed(1) + '" width="' + (maxX - minX).toFixed(1) + '" height="' + (baseY - targetTop + iconH).toFixed(1) + '"/></clipPath>';
+            piles += '<g clip-path="url(#' + clipId + ')">';
+            items.forEach((it, j) => {
+              const src = kind === "p" ? SRC_P : (j % 2 === 0 ? SRC_EB : SRC_EW);
+              piles += '<image href="' + src + '" x="' + it.x.toFixed(2) + '" y="' + it.y.toFixed(2) + '" width="' + it.w.toFixed(2) + '" height="' + it.h.toFixed(2) + '" preserveAspectRatio="xMidYMid meet" transform="rotate(' + it.rot.toFixed(2) + ' ' + it.cx.toFixed(2) + ' ' + it.cy.toFixed(2) + ')" filter="url(#pileShade)"/>';
+            });
+            piles += '</g>';
+          }
+          const visTop = pileVisualTop(items, value > 0 ? targetTop : baseY);
+          const ly = Math.max(16, visTop - 8);
+          labels += '<text x="' + cx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" fill="' + color + '" font-size="' + valFs + '" font-weight="800" font-family="Cairo, system-ui, sans-serif" stroke="rgba(28,10,77,0.88)" stroke-width="3.2" paint-order="stroke">' + fmt(value) + '</text>';
         }
-        bars += bar(xP, d.participants, "#c4a0ff", "#c4a0ff");
-        bars += bar(xE, d.engagement, "#EAF04A", "#EAF04A");
+
+        drawSeries("p", d.participants, cxP, iconWp, "#c4a0ff");
+        drawSeries("e", d.engagement, cxE, iconWe, "#EAF04A");
+
         const p = dayParts(d.ymd);
         const mon = (p.mon !== "Nov") ? " " + p.mon : "";
-        bars += '<text x="' + mid + '" y="' + (H - 26) + '" text-anchor="middle" fill="#EAF04A" font-size="' + labelFs + '" font-weight="800" font-family="Cairo, system-ui, sans-serif">' + p.day + mon + '</text>';
-        bars += '<text x="' + mid + '" y="' + (H - 10) + '" text-anchor="middle" fill="rgba(255,255,255,0.68)" font-size="' + Math.max(10, labelFs - 2) + '" font-weight="700" font-family="Cairo, system-ui, sans-serif">' + p.dow + '</text>';
+        labels += '<text x="' + mid + '" y="' + (H - 26) + '" text-anchor="middle" fill="#EAF04A" font-size="' + labelFs + '" font-weight="800" font-family="Cairo, system-ui, sans-serif">' + p.day + mon + '</text>';
+        labels += '<text x="' + mid + '" y="' + (H - 10) + '" text-anchor="middle" fill="rgba(255,255,255,0.68)" font-size="' + Math.max(10, labelFs - 2) + '" font-weight="700" font-family="Cairo, system-ui, sans-serif">' + p.dow + '</text>';
       });
 
-      el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Participants and engagement by day">' + grid + bars + '</svg>';
+      el.setAttribute("data-scale", String(U));
+      el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Participants and engagement by day"><defs>' + defs + '</defs>' + grid + behind + piles + labels + '</svg>';
     }
 
     function appendMember(parent, name, j, avW, avH, namePx, nameGap) {
@@ -822,7 +895,6 @@
       lastSig = sig;
       renderTotals(days);
       renderChart(days);
-      renderDaily(days);
       renderTeam();
     }
 
@@ -845,7 +917,6 @@
           const chart = document.getElementById("chart");
           chart.innerHTML = '<div class="empty"><div class="ar">تعذر التحميل</div><div class="en">Couldn\'t load the numbers</div><p>The page will try again shortly.</p></div>';
           renderTotals([]);
-          renderDaily([]);
           renderTeam();
           return;
         }
