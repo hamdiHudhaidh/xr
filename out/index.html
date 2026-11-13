@@ -128,12 +128,13 @@
   <div id="image-stage">
     <img class="blur" src="../poster.png" alt="" aria-hidden="true">
     <img id="poster" src="../poster.png" alt="XR Hub daily schedule">
-    <div id="poster-box"></div>
+    <div id="poster-box"><div id="hl-layer"></div></div>
   </div>
   <div id="video-stage" class="hidden">
     <div id="player"></div>
   </div>
   <div id="hint">Tap for fullscreen &amp; sound</div>
+  <script src="../poster-date.js"></script>
 
   <script>
     (function () {
@@ -272,8 +273,10 @@
       // ---- Current-session highlight (times in Asia/Riyadh) ----
       const IMG_W = 1920, IMG_H = 1080;
       // Pill boxes in poster pixels: [left, top, width, height]
-      const COL_RIGHT = 990, COL_LEFT = 289, PILL_W = 641;
-      const ROW_TOP = [500, 605, 710, 815], PILL_H = 107;
+      // Row-major, right to left: row 1 = sessions 1 (right) and 2 (left), etc.
+      const COL_RIGHT = 990, COL_LEFT = 290, PILL_W = 640, PILL_H = 91, ROW_TOP0 = 494, ROW_STEP = 111;
+      const pillBox = i => [i % 2 === 0 ? COL_RIGHT : COL_LEFT, ROW_TOP0 + ROW_STEP * Math.floor(i / 2)];
+      const HL_PAD = 6;
       const SESSIONS = [
         ["16:15", "16:45"], ["17:30", "18:00"], ["18:30", "19:00"], ["19:15", "19:45"],
         ["20:00", "20:30"], ["20:45", "21:15"], ["21:30", "22:00"], ["22:15", "22:45"]
@@ -313,23 +316,9 @@
           idx = SESSIONS.findIndex(([a]) => now.mins < toMin(a));
           mode = "next";
         }
-        box.innerHTML = "";
-        if (idx < 0) return;
-        const left = idx < 4 ? COL_RIGHT : COL_LEFT;
-        const top = ROW_TOP[idx % 4];
-        const el = document.createElement("div");
-        el.className = mode === "now" ? "hl" : "hl next";
-        el.style.left = (left / IMG_W * 100) + "%";
-        el.style.top = (top / IMG_H * 100) + "%";
-        el.style.width = (PILL_W / IMG_W * 100) + "%";
-        el.style.height = (PILL_H / IMG_H * 100) + "%";
-        const tag = document.createElement("div");
-        tag.className = "tag";
-        tag.textContent = mode === "now" ? "NOW · الآن" : "NEXT · التالي";
-        tag.style.left = "50%";
-        tag.style.top = "0";
-        el.appendChild(tag);
-        box.appendChild(el);
+        const hlLayer = document.getElementById("hl-layer");
+        hlLayer.innerHTML = "";
+        // The NOW/NEXT outline was removed; this only clears the layer.
       }
 
       window.addEventListener("resize", layoutBox);
