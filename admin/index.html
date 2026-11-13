@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2a0f6e">
+<meta name="robots" content="noindex">
+<title>XR Hub · Admin</title>
+<style>
+  :root {
+    --deep: #1c0a4d; --purple: #2a0f6e; --violet: #7a2bbf; --pink: #f04a9a; --yellow: #EAF04A;
+    --card: rgba(28, 10, 77, 0.72); --line: rgba(255,255,255,0.14); --muted: rgba(255,255,255,0.62);
+  }
+  * { box-sizing: border-box; }
+  html { margin: 0; background: #2a0f6e; }
+  body { margin: 0; min-height: 100vh; }
+  body {
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Arabic", sans-serif;
+    color: #fff;
+    background: linear-gradient(170deg, #2a0f6e 0%, #4a1690 40%, #7a2bbf 80%, #b23f93 100%);
+  }
+  button, input, select { font: inherit; color: inherit; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 14px 14px 90px; }
+  header { display: flex; align-items: center; gap: 10px; padding: 6px 2px 12px; }
+  header h1 { font-size: 20px; margin: 0; font-weight: 800; letter-spacing: .01em; }
+  header h1 span { color: var(--yellow); }
+  .status { margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.1); color: var(--muted); white-space: nowrap; }
+  .status.ok { color: var(--yellow); }
+  .status.err { background: var(--pink); color: #fff; }
+  .lock { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  nav.tabs { display: flex; gap: 6px; background: rgba(0,0,0,.18); padding: 5px; border-radius: 999px; position: sticky; top: 8px; z-index: 5; backdrop-filter: blur(8px); }
+  nav.tabs button { flex: 1; border: 0; background: none; padding: 9px 6px; border-radius: 999px; font-weight: 700; cursor: pointer; color: var(--muted); }
+  nav.tabs button.on { background: var(--yellow); color: var(--purple); }
+  section { display: none; margin-top: 14px; }
+  section.on { display: block; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 14px; margin-bottom: 12px; box-shadow: 0 6px 24px rgba(10,0,40,.25); }
+  .hint { color: var(--muted); font-size: 13px; margin: 2px 2px 12px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > input { flex: 1; min-width: 0; }
+  input[type=text], input[type=password], select {
+    background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; outline: none; width: 100%;
+  }
+  input:focus, select:focus { border-color: var(--yellow); }
+  select option { color: #000; }
+  .btn { border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 800; cursor: pointer; background: var(--yellow); color: var(--purple); white-space: nowrap; }
+  .btn.ghost { background: rgba(255,255,255,.1); color: #fff; font-weight: 600; }
+  .btn.small { padding: 6px 12px; font-size: 13px; }
+  .btn.danger { background: none; color: #ffb3d6; border: 1px solid rgba(240,74,154,.5); font-weight: 600; }
+  .team-head { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .team-head input { font-weight: 800; font-size: 17px; background: transparent; border-color: transparent; padding-left: 4px; }
+  .team-head input:hover { border-color: var(--line); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 6px 6px 12px; border-radius: 999px; background: rgba(255,255,255,.12); font-weight: 600; }
+  .chip button { border: 0; background: rgba(0,0,0,.25); width: 22px; height: 22px; border-radius: 50%; cursor: pointer; line-height: 1; color: #fff; }
+  .empty { color: var(--muted); font-style: italic; font-size: 13px; }
+  .days { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: thin; }
+  .days button { flex: none; border: 1px solid var(--line); background: rgba(255,255,255,.06); border-radius: 14px; padding: 6px 10px; cursor: pointer; text-align: center; min-width: 52px; }
+  .days button b { display: block; font-size: 16px; }
+  .days button small { color: var(--muted); font-size: 11px; }
+  .days button.on { background: var(--yellow); color: var(--purple); border-color: var(--yellow); }
+  .days button.on small { color: var(--purple); }
+  .days button.has::after { content: ""; display: block; width: 5px; height: 5px; border-radius: 50%; background: var(--pink); margin: 3px auto 0; }
+  .days button.def { min-width: 86px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0 12px; }
+  .bar .grow { flex: 1 1 100%; color: var(--muted); font-size: 13px; }
+  .sess { display: grid; grid-template-columns: 38px 1fr; gap: 10px; align-items: start; }
+  .num { width: 34px; height: 34px; border-radius: 50%; background: var(--yellow); color: var(--purple); font-weight: 900; display: grid; place-items: center; }
+  .time { font-weight: 800; font-size: 16px; }
+  .time small { color: var(--muted); font-weight: 500; margin-left: 6px; }
+  .sess select { margin-top: 6px; }
+  .tagline { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; }
+  .pill { padding: 2px 9px; border-radius: 999px; background: rgba(240,74,154,.25); color: #ffd1e6; }
+  .pill.def { background: rgba(255,255,255,.1); color: var(--muted); }
+  .link { background: none; border: 0; color: var(--yellow); text-decoration: underline; cursor: pointer; padding: 0; font-size: 12px; }
+  .people { margin-top: 10px; display: grid; gap: 6px; }
+  .person { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border-radius: 14px; background: rgba(255,255,255,.06); }
+  .person .nm { flex: 1; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+  .person.sw { background: rgba(234,240,74,.12); border: 1px solid rgba(234,240,74,.45); }
+  .person .old { color: var(--muted); text-decoration: line-through; font-weight: 500; }
+  .person .arr { color: var(--yellow); margin: 0 6px; font-weight: 900; }
+  .person .new { color: var(--yellow); font-weight: 800; }
+  .swapbox { display: flex; gap: 6px; flex: 1; }
+  .swapbox input { padding: 7px 10px; }
+  .roster-team { font-weight: 800; color: var(--yellow); }
+  .roster-people { margin-top: 4px; color: #fff; }
+  .roster-people .s { color: var(--yellow); font-weight: 700; }
+  .roster-people .s i { color: var(--muted); font-weight: 400; font-style: normal; font-size: 12px; }
+  .gate { max-width: 380px; margin: 14vh auto 0; text-align: center; }
+  .gate h2 { margin: 0 0 6px; }
+  .gate input { text-align: center; font-size: 22px; letter-spacing: .3em; margin: 14px 0 10px; }
+  .err-text { color: #ffb3d6; min-height: 20px; font-size: 13px; }
+  .banner { background: var(--pink); color: #fff; padding: 10px 14px; border-radius: 16px; margin-bottom: 12px; font-weight: 600; }
+  @media (max-width: 520px) { .wrap { padding: 10px 10px 80px; } .card { padding: 12px; border-radius: 18px; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script src="../config.js"></script>
+<script>
+(function () {
+  "use strict";
+  const API = window.XR_API;
+  const SESS = window.XR_SESSIONS;
+  const PASS_KEY = "xrAdminPasscode";
+  const COLORS = ["#EAF04A", "#f04a9a", "#5fe0c8", "#ff9f43", "#8ab4ff", "#c58cff", "#7bd389", "#ff6b6b"];
+  const app = document.getElementById("app");
+
+  const DATES = [];
+  for (let d = new Date(Date.UTC(2026, 10, 12)); d <= new Date(Date.UTC(2026, 10, 30)); d.setUTCDate(d.getUTCDate() + 1)) {
+    DATES.push(d.toISOString().slice(0, 10));
+  }
+  const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dow = ymd => DOW[new Date(ymd + "T12:00:00Z").getUTCDay()];
+  const fmt12 = t => { let [h, m] = t.split(":").map(Number); const ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12; return h + ":" + String(m).padStart(2, "0") + " " + ap; };
+  const sessTime = i => fmt12(SESS[i][0]).replace(" PM", "") + "–" + fmt12(SESS[i][1]);
+  function todayRiyadh() {
+    const q = new URLSearchParams(location.search).get("date");
+    if (q && /^\d{4}-\d{2}-\d{2}$/.test(q)) return q;
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  }
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const uid = () => "t" + Math.random().toString(36).slice(2, 9);
+
+  let data = null;
+  let pass = localStorage.getItem(PASS_KEY) || "";
+  const today = todayRiyadh();
+  const ui = { tab: new URLSearchParams(location.search).get("tab") || "teams", day: DATES.includes(today) ? today : "default", rosterDay: DATES.includes(today) ? today : DATES[0], swapping: null };
+  let saveTimer = null, dirty = false, statusText = "", statusCls = "";
+
+  function normalize(d) {
+    d = d && typeof d === "object" ? d : {};
+    return { version: 1, teams: Array.isArray(d.teams) ? d.teams : [], daily: d.daily || {}, days: d.days || {}, swaps: d.swaps || {}, updatedAt: d.updatedAt || null };
+  }
+
+  async function api(method, body, extra) {
+    const res = await fetch(API + "/data" + (extra || ""), {
+      method, cache: "no-store",
+      headers: Object.assign({ "Content-Type": "application/json" }, method === "GET" ? {} : { "X-Passcode": pass }),
+      body: body == null ? undefined : JSON.stringify(body)
+    });
+    if (res.status === 401) { const e = new Error("passcode"); e.code = 401; throw e; }
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  }
+
+  function setStatus(t, cls) { statusText = t; statusCls = cls || ""; const el = document.getElementById("status"); if (el) { el.textContent = t; el.className = "status " + statusCls; } }
+
+  function save() {
+    dirty = true; setStatus("Saving…");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try {
+        data.updatedAt = new Date().toISOString();
+        await api("PUT", data);
+        dirty = false; setStatus("Saved ✓", "ok");
+      } catch (e) {
+        if (e.code === 401) { localStorage.removeItem(PASS_KEY); pass = ""; renderGate("Passcode no longer valid. Enter it again."); return; }
+        setStatus("Not saved · retrying", "err");
+        saveTimer = setTimeout(save, 4000);
+      }
+    }, 500);
+  }
+  function change(fn) { fn(); save(); render(); }
+
+  // ---------- Passcode gate ----------
+  function renderGate(msg) {
+    app.innerHTML = `<div class="gate card">
+      <h2>XR Hub <span style="color:var(--yellow)">Admin</span></h2>
+      <div class="hint">Enter the admin passcode. It's remembered on this device.</div>
+      <form id="gf"><input id="gp" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••••" autofocus>
+      <div class="err-text" id="ge">${esc(msg || "")}</div>
+      <button class="btn" style="width:100%">Unlock</button></form></div>`;
+    document.getElementById("gf").onsubmit = async ev => {
+      ev.preventDefault();
+      const v = document.getElementById("gp").value.trim();
+      if (!v) return;
+      pass = v;
+      try { await api("POST", null, "?check=1"); localStorage.setItem(PASS_KEY, v); start(); }
+      catch (e) { pass = ""; document.getElementById("ge").textContent = e.code === 401 ? "Wrong passcode." : "Can't reach the server. Check your connection."; }
+    };
+  }
+
+  async function start() {
+    if (!API) { app.innerHTML = `<div class="gate card"><h2>Not connected</h2><div class="hint">The storage server address isn't set in config.js yet.</div></div>`; return; }
+    if (!pass) return renderGate();
+    try { data = normalize(await api("GET")); setStatus(data.updatedAt ? "Synced" : "Ready", "ok"); }
+    catch (e) { app.innerHTML = `<div class="banner">Can't load data from the server. Pull to refresh or try again shortly.</div>`; return; }
+    render();
+  }
+
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState !== "visible" || !data || dirty || ui.swapping) return;
+    try { data = normalize(await api("GET")); render(); } catch (e) {}
+  });
+
+  // ---------- Helpers ----------
+  const teamById = id => data.teams.find(t => t.id === id);
+  const teamColor = id => { const i = data.teams.findIndex(t => t.id === id); return i < 0 ? "transparent" : COLORS[i % COLORS.length]; };
+  const resolve = (ymd, s) => window.XR_resolve(data, ymd, s);
+  function teamOptions(sel) {
+    return `<option value="">— No team —</option>` + data.teams.map(t => `<option value="${esc(t.id)}" ${t.id === sel ? "selected" : ""}>${esc(t.name)}</option>`).join("");
+  }
+  function cleanSwaps(ymd, s) { delete data.swaps[ymd + "|" + s]; }
+
+  // ---------- Render ----------
+  function render() {
+    const sy = window.scrollY;
+    app.innerHTML = `
+      <header><h1>XR Hub <span>Admin</span></h1>
+        <div class="status ${statusCls}" id="status">${esc(statusText)}</div>
+        <button class="lock" id="lockBtn" title="Forget passcode on this device">Lock</button></header>
+      <nav class="tabs">
+        ${[["teams", "Teams"], ["sessions", "Sessions"], ["roster", "Roster"]].map(([k, l]) => `<button data-tab="${k}" class="${ui.tab === k ? "on" : ""}">${l}</button>`).join("")}
+      </nav>
+      <section class="${ui.tab === "teams" ? "on" : ""}">${renderTeams()}</section>
+      <section class="${ui.tab === "sessions" ? "on" : ""}">${renderSessions()}</section>
+      <section class="${ui.tab === "roster" ? "on" : ""}">${renderRoster()}</section>`;
+    window.scrollTo(0, sy);
+    bind();
+  }
+
+  function renderTeams() {
+    const cards = data.teams.map((t, i) => `
+      <div class="card" data-team="${esc(t.id)}">
+        <div class="team-head"><span class="dot" style="background:${COLORS[i % COLORS.length]}"></span>
+          <input type="text" class="tname" value="${esc(t.name)}" aria-label="Team name">
+          <button class="btn danger small" data-act="delteam">Delete</button></div>
+        <div class="chips">${t.people.length ? t.people.map((p, j) => `<span class="chip">${esc(p)}<button data-act="delperson" data-i="${j}" aria-label="Remove ${esc(p)}">×</button></span>`).join("") : `<span class="empty">No people yet</span>`}</div>
+        <form class="row addp"><input type="text" placeholder="Add a person's name" aria-label="Person name"><button class="btn small">Add</button></form>
+      </div>`).join("");
+    return `<div class="hint">These are the base teams. Swaps you make on a single session never change them.</div>
+      <form class="card row" id="newTeam"><input type="text" placeholder="New team name, e.g. Team A" aria-label="New team name"><button class="btn">+ Team</button></form>
+      ${cards || `<div class="card empty">No teams yet. Create one above.</div>`}`;
+  }
+
+  function dayStrip(cur, withDefault, id) {
+    return `<div class="days" id="${id}">
+      ${withDefault ? `<button class="def ${cur === "default" ? "on" : ""}" data-day="default"><b>Every day</b><small>default</small></button>` : ""}
+      ${DATES.map(d => {
+        const has = withDefault && (Object.keys(data.days[d] || {}).length || Object.keys(data.swaps).some(k => k.startsWith(d + "|") && data.swaps[k].length));
+        return `<button class="${cur === d ? "on" : ""} ${has ? "has" : ""}" data-day="${d}"><small>${dow(d)}${d === today ? " · today" : ""}</small><b>${Number(d.slice(8))}</b></button>`;
+      }).join("")}</div>`;
+  }
+
+  function renderSessions() {
+    if (!data.teams.length) return `<div class="card empty">Create teams first on the Teams tab.</div>`;
+    const day = ui.day;
+    const isDef = day === "default";
+    const overrides = isDef ? 0 : Object.keys(data.days[day] || {}).length;
+    const bar = isDef
+      ? `<div class="bar"><div class="grow">The default team for each session, used on every day from 12 to 30 Nov unless a day is changed.</div></div>`
+      : `<div class="bar"><div class="grow"><b style="color:#fff">${dow(day)} ${Number(day.slice(8))} Nov</b> · ${overrides ? overrides + " session" + (overrides > 1 ? "s" : "") + " changed from the default" : "same as the default"}</div>
+          ${overrides ? `<button class="btn ghost small" data-act="resetday">Reset day</button>` : ""}
+          <button class="btn ghost small" data-act="copyall">Copy this day to all days</button></div>`;
+    const items = SESS.map((_, i) => {
+      const s = i + 1;
+      let sel, note = "", people = "";
+      if (isDef) {
+        sel = data.daily[s] || "";
+      } else {
+        const r = resolve(day, s);
+        sel = r.team ? r.team.id : "";
+        note = r.overridden ? `<span class="pill">Changed for this day</span><button class="link" data-act="usedef" data-s="${s}">Use default</button>` : `<span class="pill def">Default</span>`;
+        if (r.team) {
+          people = `<div class="people">${r.team.people.length ? r.people.map(p => {
+            const key = day + "|" + s;
+            if (p.swappedFrom) return `<div class="person sw"><span class="nm"><span class="old">${esc(p.swappedFrom)}</span><span class="arr">→</span><span class="new">${esc(p.name)}</span></span><button class="btn ghost small" data-act="undo" data-s="${s}" data-from="${esc(p.swappedFrom)}">Undo</button></div>`;
+            if (ui.swapping && ui.swapping.key === key && ui.swapping.from === p.name) {
+              return `<div class="person"><span class="nm" style="flex:none">${esc(p.name)} <span class="arr">→</span></span>
+                <form class="swapbox" data-s="${s}" data-from="${esc(p.name)}"><input type="text" list="allPeople" placeholder="Replacement name" autofocus><button class="btn small">Swap</button><button type="button" class="btn ghost small" data-act="cancelswap">✕</button></form></div>`;
+            }
+            return `<div class="person"><span class="nm">${esc(p.name)}</span><button class="btn ghost small" data-act="swap" data-s="${s}" data-from="${esc(p.name)}">Swap</button></div>`;
+          }).join("") : `<span class="empty">This team has no people yet.</span>`}</div>`;
+        }
+      }
+      return `<div class="card sess"><div class="num">${s}</div><div>
+        <div class="time">${sessTime(i)}<small>Session ${s}</small></div>
+        <select data-sess="${s}" aria-label="Team for session ${s}" style="border-left:6px solid ${teamColor(sel)}">${teamOptions(sel)}</select>
+        ${note ? `<div class="tagline">${note}</div>` : ""}${people}</div></div>`;
+    }).join("");
+    const all = [...new Set(data.teams.flatMap(t => t.people))];
+    return `${dayStrip(day, true, "dayStrip")}${bar}${items}<datalist id="allPeople">${all.map(p => `<option value="${esc(p)}">`).join("")}</datalist>`;
+  }
+
+  function renderRoster() {
+    const d = ui.rosterDay;
+    const rows = SESS.map((_, i) => {
+      const r = resolve(d, i + 1);
+      return `<div class="card sess"><div class="num">${i + 1}</div><div>
+        <div class="time">${sessTime(i)}</div>
+        ${r.team ? `<div class="roster-team">${esc(r.team.name)}</div>
+          <div class="roster-people">${r.people.length ? r.people.map(p => p.swappedFrom ? `<span class="s">${esc(p.name)} <i>(for ${esc(p.swappedFrom)})</i></span>` : esc(p.name)).join(", ") : `<span class="empty">No people</span>`}</div>`
+          : `<div class="empty">No team assigned</div>`}</div></div>`;
+    }).join("");
+    return `<div class="hint">Read-only view of who is on each session, with swaps applied.</div>${dayStrip(d, false, "rosterStrip")}${rows}`;
+  }
+
+  // ---------- Events ----------
+  function bind() {
+    document.getElementById("lockBtn").onclick = () => { localStorage.removeItem(PASS_KEY); pass = ""; renderGate(); };
+    app.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { ui.tab = b.dataset.tab; ui.swapping = null; render(); window.scrollTo(0, 0); });
+
+    const nt = document.getElementById("newTeam");
+    if (nt) nt.onsubmit = ev => { ev.preventDefault(); const v = nt.querySelector("input").value.trim(); if (!v) return; change(() => data.teams.push({ id: uid(), name: v, people: [] })); };
+
+    app.querySelectorAll("[data-team]").forEach(card => {
+      const t = teamById(card.dataset.team);
+      const nameIn = card.querySelector(".tname");
+      nameIn.onchange = () => { const v = nameIn.value.trim(); if (v && v !== t.name) change(() => t.name = v); else nameIn.value = t.name; };
+      card.querySelector(".addp").onsubmit = ev => {
+        ev.preventDefault(); const inp = ev.target.querySelector("input"); const v = inp.value.trim(); if (!v) return;
+        if (t.people.includes(v)) { inp.select(); return; }
+        change(() => t.people.push(v));
+        const again = app.querySelector(`[data-team="${t.id}"] .addp input`); if (again) again.focus();
+      };
+      card.querySelectorAll("[data-act=delperson]").forEach(b => b.onclick = () => change(() => t.people.splice(Number(b.dataset.i), 1)));
+      card.querySelector("[data-act=delteam]").onclick = () => {
+        if (!confirm(`Delete "${t.name}"? It will be removed from every session it's assigned to.`)) return;
+        change(() => {
+          data.teams = data.teams.filter(x => x !== t);
+          for (const k in data.daily) if (data.daily[k] === t.id) delete data.daily[k];
+          for (const d in data.days) for (const k in data.days[d]) if (data.days[d][k] === t.id) data.days[d][k] = "";
+        });
+      };
+    });
+
+    app.querySelectorAll("#dayStrip [data-day]").forEach(b => b.onclick = () => { ui.day = b.dataset.day; ui.swapping = null; render(); });
+    app.querySelectorAll("#rosterStrip [data-day]").forEach(b => b.onclick = () => { ui.rosterDay = b.dataset.day; render(); });
+    const strip = document.querySelector("section.on .days .on"); if (strip) strip.scrollIntoView({ block: "nearest", inline: "center" });
+
+    app.querySelectorAll("select[data-sess]").forEach(sel => sel.onchange = () => {
+      const s = sel.dataset.sess, v = sel.value, day = ui.day;
+      change(() => {
+        if (day === "default") { if (v) data.daily[s] = v; else delete data.daily[s]; return; }
+        const prev = resolve(day, s).team; if (!prev || prev.id !== v) cleanSwaps(day, s);
+        const days = data.days[day] = data.days[day] || {};
+        if ((data.daily[s] || "") === v) delete days[s]; else days[s] = v;
+        if (!Object.keys(days).length) delete data.days[day];
+      });
+    });
+    app.querySelectorAll("[data-act=usedef]").forEach(b => b.onclick = () => change(() => {
+      const s = b.dataset.s; cleanSwaps(ui.day, s); delete data.days[ui.day][s]; if (!Object.keys(data.days[ui.day]).length) delete data.days[ui.day];
+    }));
+    const rd = app.querySelector("[data-act=resetday]");
+    if (rd) rd.onclick = () => { if (confirm("Put every session on this day back to the default teams? Swaps on this day are cleared too.")) change(() => { delete data.days[ui.day]; for (const k in data.swaps) if (k.startsWith(ui.day + "|")) delete data.swaps[k]; }); };
+    const ca = app.querySelector("[data-act=copyall]");
+    if (ca) ca.onclick = () => {
+      if (!confirm("Use this day's teams as the default for every day (12–30 Nov)? Changes made on other days are cleared. Swaps stay.")) return;
+      change(() => {
+        const nd = {}; SESS.forEach((_, i) => { const r = resolve(ui.day, i + 1); if (r.team) nd[i + 1] = r.team.id; });
+        data.daily = nd; data.days = {};
+        for (const k in data.swaps) { const [d, s] = k.split("|"); const r = resolve(d, s); data.swaps[k] = (data.swaps[k] || []).filter(w => r.team && r.team.people.includes(w.from)); if (!data.swaps[k].length) delete data.swaps[k]; }
+      });
+    };
+    app.querySelectorAll("[data-act=swap]").forEach(b => b.onclick = () => { ui.swapping = { key: ui.day + "|" + b.dataset.s, from: b.dataset.from }; render(); const i = app.querySelector(".swapbox input"); if (i) i.focus(); });
+    app.querySelectorAll("[data-act=cancelswap]").forEach(b => b.onclick = () => { ui.swapping = null; render(); });
+    app.querySelectorAll(".swapbox").forEach(f => f.onsubmit = ev => {
+      ev.preventDefault(); const v = f.querySelector("input").value.trim(); if (!v) return;
+      const key = ui.day + "|" + f.dataset.s, from = f.dataset.from;
+      ui.swapping = null;
+      if (v === from) { render(); return; }
+      change(() => { const list = (data.swaps[key] || []).filter(w => w.from !== from); list.push({ from, to: v }); data.swaps[key] = list; });
+    });
+    app.querySelectorAll("[data-act=undo]").forEach(b => b.onclick = () => change(() => {
+      const key = ui.day + "|" + b.dataset.s; data.swaps[key] = (data.swaps[key] || []).filter(w => w.from !== b.dataset.from); if (!data.swaps[key].length) delete data.swaps[key];
+    }));
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>

@@ -118,6 +118,34 @@
       box-shadow: 0 0 1.4vmin rgba(234, 240, 74, 0.3);
     }
     .hl.next .tag { background: rgba(42, 15, 110, 0.95); color: #EAF04A; border: 0.15vmin solid #EAF04A; box-shadow: none; }
+    .done {
+      position: absolute;
+      border-radius: 999px;
+      background: rgba(70, 64, 92, 0.62);
+      -webkit-backdrop-filter: grayscale(1) brightness(0.8);
+      backdrop-filter: grayscale(1) brightness(0.8);
+    }
+    .done .tick {
+      position: absolute; right: 2.2%; top: 50%; transform: translateY(-50%);
+      font: 700 0.95vmin/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+      letter-spacing: 0.08em; color: rgba(255,255,255,0.75);
+      background: rgba(30, 26, 44, 0.8); padding: 0.5vmin 0.9vmin; border-radius: 999px; white-space: nowrap;
+      display: none;
+    }
+    .team {
+      position: absolute;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: #241063;
+      border: 0.14vmin solid rgba(234, 240, 74, 0.55);
+      border-radius: 999px;
+      color: #EAF04A;
+      font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans Arabic", sans-serif;
+      text-align: center;
+      overflow: hidden;
+    }
+    .team .lbl { font-weight: 600; color: rgba(255,255,255,0.72); letter-spacing: 0.06em; line-height: 1; }
+    .team .nm { font-weight: 800; line-height: 1.05; white-space: nowrap; max-width: 100%; padding: 0 6%; overflow: hidden; text-overflow: ellipsis; }
+    .team.past { border-color: rgba(255,255,255,0.25); color: #d6d3df; background: #3a3550; }
     @keyframes hlpulse {
       0%, 100% { box-shadow: 0 0 1vmin #EAF04A, 0 0 2.5vmin rgba(234,240,74,0.45), inset 0 0 1vmin rgba(234,240,74,0.25); }
       50% { box-shadow: 0 0 1.8vmin #EAF04A, 0 0 5vmin rgba(234,240,74,0.7), inset 0 0 2vmin rgba(234,240,74,0.45); }
@@ -128,12 +156,13 @@
   <div id="image-stage">
     <img class="blur" src="../poster.png" alt="" aria-hidden="true">
     <img id="poster" src="../poster.png" alt="XR Hub daily schedule">
-    <div id="poster-box"></div>
+    <div id="poster-box"><div id="team-layer"></div><div id="done-layer"></div><div id="hl-layer"></div></div>
   </div>
   <div id="video-stage" class="hidden">
     <div id="player"></div>
   </div>
   <div id="hint">Tap for fullscreen</div>
+  <script src="../config.js"></script>
 
   <script>
     (function () {
@@ -279,18 +308,23 @@
         ["20:00", "20:30"], ["20:45", "21:15"], ["21:30", "22:00"], ["22:15", "22:45"]
       ];
       const box = document.getElementById("poster-box");
+      const hlLayer = document.getElementById("hl-layer");
+      const doneLayer = document.getElementById("done-layer");
+      const teamLayer = document.getElementById("team-layer");
       const posterImg = document.getElementById("poster");
       const toMin = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 
       function riyadhNow() {
-        const q = new URLSearchParams(location.search).get("now");
-        if (q && /^\d{1,2}:\d{2}$/.test(q)) return { mins: toMin(q), ymd: "2026-11-15" };
+        const sp = new URLSearchParams(location.search);
+        const q = sp.get("now"), qd = sp.get("date");
+        const okDate = qd && /^\d{4}-\d{2}-\d{2}$/.test(qd);
+        if (q && /^\d{1,2}:\d{2}$/.test(q)) return { mins: toMin(q), ymd: okDate ? qd : "2026-11-15" };
         const parts = new Intl.DateTimeFormat("en-CA", {
           timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit",
           hour: "2-digit", minute: "2-digit", hourCycle: "h23"
         }).formatToParts(new Date());
         const p = {}; parts.forEach(x => p[x.type] = x.value);
-        return { mins: Number(p.hour) * 60 + Number(p.minute), ymd: `${p.year}-${p.month}-${p.day}` };
+        return { mins: Number(p.hour) * 60 + Number(p.minute), ymd: okDate ? qd : `${p.year}-${p.month}-${p.day}` };
       }
 
       function layoutBox() {
@@ -313,7 +347,9 @@
           idx = SESSIONS.findIndex(([a]) => now.mins < toMin(a));
           mode = "next";
         }
-        box.innerHTML = "";
+        hlLayer.innerHTML = "";
+        renderDone(now);
+        renderTeams(now);
         if (idx < 0) return;
         const left = idx < 4 ? COL_RIGHT : COL_LEFT;
         const top = ROW_TOP[idx % 4];
@@ -329,9 +365,68 @@
         tag.style.left = "50%";
         tag.style.top = "0";
         el.appendChild(tag);
-        box.appendChild(el);
+        hlLayer.appendChild(el);
       }
 
+
+      // ---- Finished sessions (greyed) and assigned team names ----
+      const inEvent = ymd => ymd >= "2026-11-12" && ymd <= "2026-11-30";
+      const pct = (v, total) => (v / total * 100) + "%";
+      function place(el, i, x, y, w, h) {
+        const left = i < 4 ? COL_RIGHT : COL_LEFT, top = ROW_TOP[i % 4];
+        el.style.left = pct(left + x, IMG_W); el.style.top = pct(top + y, IMG_H);
+        el.style.width = pct(w, IMG_W); el.style.height = pct(h, IMG_H);
+      }
+      function renderDone(now) {
+        doneLayer.innerHTML = "";
+        if (!inEvent(now.ymd)) return;
+        SESSIONS.forEach(([, b], i) => {
+          if (now.mins < toMin(b)) return;
+          const el = document.createElement("div");
+          el.className = "done";
+          place(el, i, 0, 8, PILL_W, 90);
+          doneLayer.appendChild(el);
+        });
+      }
+      // Free space between the TO time and the FROM label, centred on the arrow (poster px).
+      const ARROW_X = [246, 246, 246, 246, 247, 247, 261, 254];
+      const ZONE_W = 212, ZONE_TOP = 24, ZONE_H = 64;
+      let teamData = null;
+      function renderTeams(now) {
+        teamLayer.innerHTML = "";
+        if (!teamData || !window.XR_resolve || !inEvent(now.ymd)) return;
+        const unit = box.clientHeight / IMG_H; // screen px per poster px
+        SESSIONS.forEach(([, b], i) => {
+          const r = window.XR_resolve(teamData, now.ymd, i + 1);
+          if (!r.team || !r.team.name) return;
+          const el = document.createElement("div");
+          el.className = "team" + (now.mins >= toMin(b) ? " past" : "");
+          place(el, i, ARROW_X[i] - ZONE_W / 2, ZONE_TOP, ZONE_W, ZONE_H);
+          const lbl = document.createElement("div");
+          lbl.className = "lbl"; lbl.textContent = "TEAM · الفريق";
+          lbl.style.fontSize = 12 * unit + "px";
+          const nm = document.createElement("div");
+          nm.className = "nm"; nm.textContent = r.team.name;
+          el.appendChild(lbl); el.appendChild(nm);
+          teamLayer.appendChild(el);
+          // Largest font (30 poster px down to 17) that fits the chip width.
+          let fs = 30;
+          nm.style.fontSize = fs * unit + "px";
+          while (fs > 17 && nm.scrollWidth > nm.clientWidth + 1) { fs -= 1; nm.style.fontSize = fs * unit + "px"; }
+        });
+      }
+      async function loadTeams() {
+        if (!window.XR_API) return;
+        try {
+          const res = await fetch(window.XR_API + "/data", { cache: "no-store" });
+          if (!res.ok) throw new Error(res.status);
+          teamData = await res.json();
+        } catch (e) { teamData = null; }
+        updateHighlight();
+      }
+      window.addEventListener("resize", () => { layoutBox(); updateHighlight(); });
+      loadTeams();
+      setInterval(loadTeams, 45000);
       window.addEventListener("resize", layoutBox);
       layoutBox();
       updateHighlight();

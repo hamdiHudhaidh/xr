@@ -1,0 +1,13 @@
+name = "xr-admin-api"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+account_id = "91bd9cbc0c3566571940b04a86748e9b"
+workers_dev = true
+
+[[durable_objects.bindings]]
+name = "STORE"
+class_name = "Store"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Store"]

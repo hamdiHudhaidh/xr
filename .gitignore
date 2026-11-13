@@ -1,2 +1,9 @@
 shot-*.png
 .DS_Store
+.admin-passcode
+*-preview-*.png
+test-*.png
+live-*.png
+worker/.dev.vars
+worker/.wrangler/
+worker/node_modules/
