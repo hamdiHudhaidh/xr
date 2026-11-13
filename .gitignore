@@ -7,3 +7,5 @@ live-*.png
 worker/.dev.vars
 worker/.wrangler/
 worker/node_modules/
+
+_mock/

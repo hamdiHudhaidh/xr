@@ -1,5 +1,10 @@
 const ORIGINS = ["https://hamdihudhaidh.github.io", "http://localhost:8765", "http://127.0.0.1:8765"];
-const KEYS = new Set(["data", "test"]);
+const KEYS = new Set(["data", "test", "avatars"]);
+const MAX_BYTES = { data: 500000, test: 500000, avatars: 2500000 };
+const AVATAR_ONE_MAX = 60000;
+const AVATAR_NAME_MAX = 80;
+const AVATAR_MAX_COUNT = 200;
+const AVATAR_RE = /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=\s]+$/;
 
 function cors(req) {
   const o = req.headers.get("Origin");
@@ -22,6 +27,21 @@ function safeEq(a, b) {
   return r === 0;
 }
 
+function validateAvatars(obj) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return "expected an object of name → image";
+  const keys = Object.keys(obj);
+  if (keys.length > AVATAR_MAX_COUNT) return "too many avatars";
+  for (const name of keys) {
+    if (typeof name !== "string" || !name.trim() || name.length > AVATAR_NAME_MAX) return "bad name";
+    const v = obj[name];
+    if (v == null || v === "") { delete obj[name]; continue; }
+    if (typeof v !== "string") return "image must be a data URL";
+    if (v.length > AVATAR_ONE_MAX) return "image too large";
+    if (!AVATAR_RE.test(v)) return "image must be a jpeg, png or webp data URL";
+  }
+  return null;
+}
+
 export class Store {
   constructor(state) { this.state = state; }
   async fetch(req) {
@@ -38,7 +58,7 @@ export default {
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(req) });
     const url = new URL(req.url);
     const key = url.pathname.replace(/^\/+|\/+$/g, "") || "";
-    if (!KEYS.has(key)) return json(req, { ok: true, service: "xr-admin-api", endpoints: ["/data"] }, key ? 404 : 200);
+    if (!KEYS.has(key)) return json(req, { ok: true, service: "xr-admin-api", endpoints: ["/data", "/avatars"] }, key ? 404 : 200);
     const stub = env.STORE.get(env.STORE.idFromName("main"));
     const inner = "https://store/?k=" + key;
     if (req.method === "GET") return json(req, await (await stub.fetch(inner)).text());
@@ -47,8 +67,16 @@ export default {
     if (!authed) return json(req, { error: "bad passcode" }, 401);
     if (req.method === "PUT") {
       const body = await req.text();
-      if (body.length > 500000) return json(req, { error: "too large" }, 413);
-      try { JSON.parse(body); } catch { return json(req, { error: "invalid json" }, 400); }
+      const limit = MAX_BYTES[key] || 500000;
+      if (body.length > limit) return json(req, { error: "too large" }, 413);
+      let parsed;
+      try { parsed = JSON.parse(body); } catch { return json(req, { error: "invalid json" }, 400); }
+      if (key === "avatars") {
+        const err = validateAvatars(parsed);
+        if (err) return json(req, { error: err }, 400);
+        await stub.fetch(inner, { method: "PUT", body: JSON.stringify(parsed) });
+        return json(req, { ok: true });
+      }
       await stub.fetch(inner, { method: "PUT", body });
       return json(req, { ok: true });
     }
