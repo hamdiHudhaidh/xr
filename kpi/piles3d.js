@@ -3,7 +3,7 @@
   "use strict";
   const CAP = 20000;
   const ASPECT_H = 0.7; /* wide, low mound; a little extra height so the heap reads in 3D */
-  const SAFE = { top: 0.22, bottom: 0.64, left: 0.05, right: 0.95 };
+  const SAFE = { top: 0.22, bottom: 0.66, left: 0.03, right: 0.97 };
   let renderer, scene, camera, canvas;
   let meshBody, meshVisor, meshCubeB, meshCubeW;
   let dummy = null;
@@ -13,7 +13,7 @@
   let lights = {};
   let heapMeta = [];
   let lastSig = "";
-  const ORIGIN_Z = 6.15;
+  const ORIGIN_Z = 6.22;
   let SPAN = 8.4;
 
   function seedRng(str) {
@@ -326,14 +326,14 @@
     const recede = Math.abs(t - 0.5) * 2;
     /* Gentle arc: centre closer to the camera (larger z). */
     const wx = -span / 2 + span * t;
-    const wz = ORIGIN_Z + (1 - recede * recede) * 0.28;
+    const wz = ORIGIN_Z + (1 - recede * recede) * 0.14;
     return { t: t, recede: recede, wx: wx, wz: wz };
   }
 
   function update(slots) {
     if (!renderer) return [];
     resize();
-    const sig = JSON.stringify(slots.map(s => [s.ymd, s.participants || 0, s.engagement || 0, s.index, slots.length])) + "|v3";
+    const sig = JSON.stringify(slots.map(s => [s.ymd, s.participants || 0, s.engagement || 0, s.index, slots.length])) + "|v11";
     const size = (canvas.clientWidth || 0) + "x" + (canvas.clientHeight || 0);
     const full = sig + "|" + size;
     if (full === lastSig && heapMeta.length) return heapMeta;
@@ -353,11 +353,13 @@
     /* Pick a unit item radius that keeps the busiest day's two heaps in their slot
        and the tallest mound under the sky totals. Geometries are unit-sized. */
     function moundR(count, itemR) { return settleMound(Math.max(1, count), itemR, "fit").R; }
-    let itemR = slotW * 0.2;
+    /* Aim for ~1.7–2× the previous visual size. Neighbouring mounds may kiss;
+       labels are stacked in a column so they stay readable. */
+    let itemR = slotW * 0.36;
     const unitP = maxP > 0 ? moundR(maxP, 1) : 1;
     const unitE = maxE > 0 ? moundR(maxE, 1) : 1;
     const widthUnits = (maxP > 0 ? unitP * 2 : 0) + (maxE > 0 ? unitE * 2 : 0) + (maxP > 0 && maxE > 0 ? 0.22 : 0);
-    if (widthUnits > 0) itemR = Math.min(itemR, (slotW * 1.34) / widthUnits);
+    if (widthUnits > 0) itemR = Math.min(itemR, (slotW * 2.45) / widthUnits);
 
     const heightUnits = ASPECT_H * Math.max(maxP > 0 ? unitP : 0, maxE > 0 ? unitE : 0, 1);
     const mid = dayAnchor(Math.floor((n - 1) / 2), n, span);
@@ -365,14 +367,14 @@
     const upPt = project(mid.wx, 1, mid.wz);
     const pxPerWorldY = Math.abs(groundPt.y - upPt.y) || 1;
     const pxPerWorldX = Math.abs(project(mid.wx + 1, 0, mid.wz).x - groundPt.x) || 1;
-    const maxHpx = Math.max(40, groundPt.y - SAFE.top * H - 58);
+    const labelPad = 108; /* stacked tot + P + E pills above the mound */
+    const maxHpx = Math.max(40, groundPt.y - SAFE.top * H - labelPad);
     if (heightUnits * pxPerWorldY * itemR > maxHpx) {
       itemR = maxHpx / (heightUnits * pxPerWorldY);
     }
-    /* Keep individual headsets/cubes readable (~12px wide), even if neighbouring heaps kiss. */
-    const minItemR = 18 / (2.35 * pxPerWorldX);
-    itemR = Math.max(itemR, minItemR, 0.018);
-    if (heightUnits * pxPerWorldY * itemR > maxHpx * 1.15) {
+    const minItemR = 28 / (2.35 * pxPerWorldX);
+    itemR = Math.max(itemR, minItemR, 0.024);
+    if (heightUnits * pxPerWorldY * itemR > maxHpx * 1.12) {
       itemR = Math.max(minItemR * 0.85, maxHpx / (heightUnits * pxPerWorldY));
     }
     const instScale = itemR * 2.35; /* slightly chunkier than the packing radius */

@@ -161,22 +161,32 @@
     transform: translate(-50%, -100%);
     transform-origin: 50% 100%; pointer-events: none;
   }
-  .plot-val, .plot-tot {
+  .plot-stack {
     position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25vmin;
     transform: translate(-50%, -100%);
+    pointer-events: none;
+  }
+  .plot-val, .plot-tot {
     font-weight: 800; line-height: 1;
     font-variant-numeric: tabular-nums;
-    padding: 0.28vmin 0.95vmin;
+    padding: 0.22vmin 0.8vmin;
     border-radius: 999px;
-    background: rgba(6, 3, 16, 0.9);
+    background: rgba(6, 3, 16, 0.92);
     box-shadow: 0 0 0.2vmin rgba(255,255,255,0.28), 0 0 1.1vmin rgba(6,3,16,0.95);
     pointer-events: none;
     white-space: nowrap;
   }
-  .plot-tot { font-size: 2.2vmin; color: #fff; }
-  .plot-val { font-size: 2.05vmin; }
+  .plot-tot { font-size: 2.55vmin; color: #fff; padding: 0.32vmin 1.05vmin; }
+  .plot-val { font-size: 1.8vmin; }
   .plot-val.p { color: #e8d8ff; }
   .plot-val.e { color: var(--yellow); }
+  .plot.ground {
+    transform: translate(-50%, 18px);
+  }
   .plot .shadow {
     width: 4.2vmin; height: 1.1vmin; margin-top: 0.1vh; border-radius: 50%;
     background: radial-gradient(ellipse at center, rgba(0,0,0,0.55), transparent 70%);
@@ -570,7 +580,7 @@
       const W = window.innerWidth || 1920;
       const H = window.innerHeight || 1080;
       const n = days.length;
-      const padX = W * 0.045;
+      const padX = W * 0.03;
       const slot = (W - padX * 2) / Math.max(n, 1);
       const baseY = H * 0.66;
       const slots = days.map((ymd, i) => {
@@ -590,24 +600,21 @@
         const m = by[ymd];
         const t = n === 1 ? 0.5 : i / (n - 1);
         const recede = Math.abs(t - 0.5) * 2;
-        const gx = m ? m.groundX : (padX + slot * i + slot / 2);
+        const gx = m ? m.groundX : (padX + slot * (i + 0.5));
         const gy = m ? m.groundY : baseY;
         const z = Math.round((1 - recede) * 20);
         if (filled) {
-          if (m && m.p) {
-            html += '<div class="plot-val p" data-day="' + ymd + '" style="left:' + m.p.topX.toFixed(1) + "px;top:" + m.p.topY.toFixed(1) + 'px;z-index:' + (z + 2) + '">' + fmt(rec.participants) + "</div>";
-          }
-          if (m && m.e) {
-            html += '<div class="plot-val e" data-day="' + ymd + '" style="left:' + m.e.topX.toFixed(1) + "px;top:" + m.e.topY.toFixed(1) + 'px;z-index:' + (z + 2) + '">' + fmt(rec.engagement) + "</div>";
-          }
-          if (m && m.p && m.e) {
-            const totX = (m.p.topX + m.e.topX) / 2;
-            const totY = Math.min(m.p.topY, m.e.topY) - Math.max(16, H * 0.018);
-            html += '<div class="plot-tot" data-day="' + ymd + '" style="left:' + totX.toFixed(1) + "px;top:" + totY.toFixed(1) + 'px;z-index:' + (z + 3) + '">' + fmt(rec.total) + "</div>";
-          }
-          html += '<div class="plot' + (isToday ? " today" : "") + '" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + gy.toFixed(1) + 'px;z-index:' + z + '"><div class="shadow"></div><div class="day-lbl">' + p.day + "</div></div>";
+          const topY = Math.min(
+            m && m.p ? m.p.topY : gy,
+            m && m.e ? m.e.topY : gy
+          );
+          let stack = '<div class="plot-tot">' + fmt(rec.total) + "</div>";
+          if (rec.participants > 0) stack += '<div class="plot-val p">' + fmt(rec.participants) + "</div>";
+          if (rec.engagement > 0) stack += '<div class="plot-val e">' + fmt(rec.engagement) + "</div>";
+          html += '<div class="plot-stack" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + topY.toFixed(1) + 'px;z-index:' + (z + 3) + '">' + stack + "</div>";
+          html += '<div class="plot ground' + (isToday ? " today" : "") + '" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + gy.toFixed(1) + 'px;z-index:' + z + '"><div class="shadow"></div><div class="day-lbl">' + p.day + "</div></div>";
         } else {
-          html += '<div class="plot empty' + (isToday ? " today" : "") + '" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + gy.toFixed(1) + 'px;z-index:' + z + '"><div class="pad"></div><div class="day-lbl">' + p.day + "</div></div>";
+          html += '<div class="plot empty ground' + (isToday ? " today" : "") + '" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + gy.toFixed(1) + 'px;z-index:' + z + '"><div class="pad"></div><div class="day-lbl">' + p.day + "</div></div>";
         }
       });
       root.innerHTML = html;
