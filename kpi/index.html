@@ -71,23 +71,23 @@
     background: radial-gradient(circle at 68% 40%, transparent 42%, rgba(11, 5, 32, 0.18) 80%);
   }
   .buildings {
-    position: fixed; left: 0; right: 0; top: 5%; height: 36%;
+    position: fixed; left: 0; right: 0; top: 2%; height: 46%;
     z-index: 2; pointer-events: none;
   }
   .buildings .b {
     position: absolute; object-fit: contain; object-position: bottom center;
-    filter: brightness(0.8) saturate(0.8);
+    filter: brightness(0.9) saturate(0.85);
     pointer-events: none;
   }
   .buildings .ithra {
-    left: 1%; bottom: 8%; height: 100%; width: 44%;
+    left: 0%; bottom: 0; height: 100%; width: 44%;
     object-position: left bottom;
-    filter: brightness(0.8) saturate(0.8) drop-shadow(0 1.2vmin 2.4vmin rgba(40, 70, 140, 0.35));
+    filter: brightness(0.92) saturate(0.88) drop-shadow(0 1.2vmin 2.4vmin rgba(40, 70, 140, 0.35));
   }
   .buildings .expo {
-    right: 1%; bottom: 10%; height: 58%; width: 48%;
+    right: -1%; bottom: 4%; height: 82%; width: 54%;
     object-position: right bottom;
-    filter: brightness(0.8) saturate(0.8) drop-shadow(0 1.2vmin 2.4vmin rgba(40, 70, 140, 0.35));
+    filter: brightness(0.94) saturate(0.88) drop-shadow(0 1.2vmin 2.4vmin rgba(40, 70, 140, 0.35));
   }
   #woods {
     position: fixed; inset: 0; z-index: 3; pointer-events: none; overflow: hidden;
@@ -158,32 +158,27 @@
   #plots { position: fixed; inset: 0; z-index: 6; pointer-events: none; }
   .plot {
     position: absolute; display: flex; flex-direction: column; align-items: center;
+    transform: translate(-50%, -100%);
     transform-origin: 50% 100%; pointer-events: none;
   }
-  .plot .floated { display: flex; flex-direction: column; align-items: center; margin-bottom: 0.15vh; }
-  .plot .day-tot {
-    font-weight: 800; font-size: 2.55vmin; line-height: 1; color: #fff;
-    font-variant-numeric: tabular-nums;
-    margin-bottom: 0.4vh;
-    padding: 0.28vmin 1.05vmin;
-    border-radius: 999px;
-    background: rgba(6, 3, 16, 0.88);
-    box-shadow: 0 0 0.2vmin rgba(255,255,255,0.28), 0 0 1.2vmin rgba(6,3,16,0.95);
-  }
-  .plot .pair { display: flex; align-items: flex-end; justify-content: center; gap: 0.45vw; }
-  .pile { display: flex; flex-direction: column; align-items: center; }
-  .pile .val {
-    font-weight: 800; font-size: 2.35vmin; line-height: 1;
+  .plot-val, .plot-tot {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    font-weight: 800; line-height: 1;
     font-variant-numeric: tabular-nums;
     padding: 0.28vmin 0.95vmin;
     border-radius: 999px;
-    background: rgba(6, 3, 16, 0.88);
-    box-shadow: 0 0 0.2vmin rgba(255,255,255,0.25), 0 0 1.1vmin rgba(6,3,16,0.95);
+    background: rgba(6, 3, 16, 0.9);
+    box-shadow: 0 0 0.2vmin rgba(255,255,255,0.28), 0 0 1.1vmin rgba(6,3,16,0.95);
+    pointer-events: none;
+    white-space: nowrap;
   }
-  .pile.p .val { color: #e4d0ff; }
-  .pile.e .val { color: var(--yellow); }
+  .plot-tot { font-size: 2.2vmin; color: #fff; }
+  .plot-val { font-size: 2.05vmin; }
+  .plot-val.p { color: #e8d8ff; }
+  .plot-val.e { color: var(--yellow); }
   .plot .shadow {
-    width: 78%; height: 1.1vmin; margin-top: 0.15vh; border-radius: 50%;
+    width: 4.2vmin; height: 1.1vmin; margin-top: 0.1vh; border-radius: 50%;
     background: radial-gradient(ellipse at center, rgba(0,0,0,0.55), transparent 70%);
   }
   .plot.empty .pad {
@@ -233,6 +228,16 @@
   #fire .frame:first-child { position: relative; }
   #fire .frame.on { opacity: 1; }
   #team { position: fixed; inset: 0; z-index: 9; pointer-events: none; }
+  #seat-names {
+    position: fixed; inset: 0; z-index: 11; pointer-events: none;
+  }
+  #seat-names .av-name {
+    position: absolute;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    white-space: nowrap;
+  }
   .member {
     position: absolute; display: flex; flex-direction: column; align-items: center;
     transform: translate(-50%, -100%);
@@ -273,8 +278,8 @@
   @media (max-aspect-ratio: 3/4) {
     .sky-totals { left: 4%; right: 4%; gap: 3vw; top: 8%; }
     .brand { top: 1.4%; }
-    .buildings .ithra { width: 70%; height: 70%; }
-    .buildings .expo { width: 70%; height: 40%; }
+    .buildings .ithra { width: 78%; height: 88%; }
+    .buildings .expo { width: 78%; height: 58%; }
   }
 </style>
 </head>
@@ -474,22 +479,22 @@
       const root = document.getElementById("woods");
       const W = window.innerWidth || 1920;
       const H = window.innerHeight || 1080;
-      const sig = W + "x" + H;
+      const sig = W + "x" + H + ":v3";
       if (root.dataset.sig === sig) return;
       root.dataset.sig = sig;
-      const rng = seedRng("woods:kpi-scene:v2");
+      const rng = seedRng("woods:kpi-scene:v3");
       const rows = [
-        { count: 17, foot: 0.448, hMin: 0.20, hMax: 0.29, b0: 0.60, b1: 0.70, z: 1 },
-        { count: 11, foot: 0.492, hMin: 0.26, hMax: 0.36, b0: 0.74, b1: 0.85, z: 2 },
-        { count: 4,  foot: 0.545, hMin: 0.30, hMax: 0.40, b0: 0.82, b1: 0.90, z: 4, sides: true }
+        { count: 15, foot: 0.515, hMin: 0.15, hMax: 0.22, b0: 0.60, b1: 0.70, z: 1 },
+        { count: 10, foot: 0.548, hMin: 0.18, hMax: 0.26, b0: 0.74, b1: 0.85, z: 2 },
+        { count: 4,  foot: 0.575, hMin: 0.22, hMax: 0.30, b0: 0.82, b1: 0.90, z: 4, sides: true }
       ];
       let html = "";
       rows.forEach((row, ri) => {
         for (let i = 0; i < row.count; i++) {
           const kind = TREE_SRC[Math.floor(rng() * TREE_SRC.length)];
           const flip = rng() < 0.5;
-          const h = (row.hMin + rng() * (row.hMax - row.hMin)) * H;
-          const w = h * kind.aspect;
+          let h = (row.hMin + rng() * (row.hMax - row.hMin)) * H;
+          let w = h * kind.aspect;
           let x;
           if (row.sides) {
             const left = i < row.count / 2;
@@ -499,6 +504,8 @@
             const t = (i + 0.5 + (rng() - 0.5) * 0.35) / row.count;
             x = t * W;
           }
+          const xn = x / W;
+          if (!row.sides && (xn < 0.24 || (xn > 0.54 && xn < 0.90))) { h *= 0.68; w = h * kind.aspect; }
           const y = row.foot * H + (rng() - 0.5) * 10;
           const bright = row.b0 + rng() * (row.b1 - row.b0);
           const scaleX = flip ? -1 : 1;
@@ -563,9 +570,9 @@
       const W = window.innerWidth || 1920;
       const H = window.innerHeight || 1080;
       const n = days.length;
-      const padX = W * 0.04;
+      const padX = W * 0.045;
       const slot = (W - padX * 2) / Math.max(n, 1);
-      const baseY = H * 0.675;
+      const baseY = H * 0.66;
       const slots = days.map((ymd, i) => {
         const rec = byDay[ymd] || { participants: 0, engagement: 0 };
         return { ymd: ymd, index: i, participants: rec.participants || 0, engagement: rec.engagement || 0 };
@@ -583,22 +590,25 @@
         const m = by[ymd];
         const t = n === 1 ? 0.5 : i / (n - 1);
         const recede = Math.abs(t - 0.5) * 2;
-        const x = m ? (filled ? m.topX : m.groundX) : (padX + slot * i + slot / 2);
-        const y = m ? (filled ? m.topY : m.groundY) : baseY;
-        let inner = "";
+        const gx = m ? m.groundX : (padX + slot * i + slot / 2);
+        const gy = m ? m.groundY : baseY;
+        const z = Math.round((1 - recede) * 20);
         if (filled) {
-          inner += '<div class="floated">';
-          inner += '<div class="day-tot">' + fmt(rec.total) + "</div>";
-          inner += '<div class="pair">';
-          inner += '<div class="pile p"><div class="val">' + fmt(rec.participants) + "</div></div>";
-          inner += '<div class="pile e"><div class="val">' + fmt(rec.engagement) + "</div></div>";
-          inner += "</div></div>";
-          inner += '<div class="shadow"></div>';
+          if (m && m.p) {
+            html += '<div class="plot-val p" data-day="' + ymd + '" style="left:' + m.p.topX.toFixed(1) + "px;top:" + m.p.topY.toFixed(1) + 'px;z-index:' + (z + 2) + '">' + fmt(rec.participants) + "</div>";
+          }
+          if (m && m.e) {
+            html += '<div class="plot-val e" data-day="' + ymd + '" style="left:' + m.e.topX.toFixed(1) + "px;top:" + m.e.topY.toFixed(1) + 'px;z-index:' + (z + 2) + '">' + fmt(rec.engagement) + "</div>";
+          }
+          if (m && m.p && m.e) {
+            const totX = (m.p.topX + m.e.topX) / 2;
+            const totY = Math.min(m.p.topY, m.e.topY) - Math.max(16, H * 0.018);
+            html += '<div class="plot-tot" data-day="' + ymd + '" style="left:' + totX.toFixed(1) + "px;top:" + totY.toFixed(1) + 'px;z-index:' + (z + 3) + '">' + fmt(rec.total) + "</div>";
+          }
+          html += '<div class="plot' + (isToday ? " today" : "") + '" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + gy.toFixed(1) + 'px;z-index:' + z + '"><div class="shadow"></div><div class="day-lbl">' + p.day + "</div></div>";
         } else {
-          inner += '<div class="pad"></div>';
+          html += '<div class="plot empty' + (isToday ? " today" : "") + '" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + gy.toFixed(1) + 'px;z-index:' + z + '"><div class="pad"></div><div class="day-lbl">' + p.day + "</div></div>";
         }
-        inner += '<div class="day-lbl">' + p.day + "</div>";
-        html += '<div class="plot' + (isToday ? " today" : "") + (filled ? "" : " empty") + '" data-day="' + ymd + '" style="left:' + x.toFixed(1) + "px;top:" + y.toFixed(1) + "px;width:" + (slot * 0.96).toFixed(1) + 'px;transform:translate(-50%,-100%);z-index:' + Math.round((1 - recede) * 20) + '">' + inner + "</div>";
       });
       root.innerHTML = html;
     }
@@ -702,9 +712,15 @@
       });
       names.forEach(n => { if (!used.has(n)) order.push(n); });
       const N = order.length;
-      const a0 = -155 * Math.PI / 180, a1 = 155 * Math.PI / 180;
+      const explicit = {
+        muneera: -158, hamdi: -126, modi: -88,
+        omar: -46, shatha: 0, joud: 46,
+        mohammed: 88, sara: 126, maram: 158
+      };
+      const a0 = -158 * Math.PI / 180, a1 = 158 * Math.PI / 180;
       return order.map((name, i) => {
-        const ang = N <= 1 ? 0 : a0 + (i / (N - 1)) * (a1 - a0);
+        const preset = explicit[String(name).trim().toLowerCase()];
+        const ang = preset != null ? preset * Math.PI / 180 : (N <= 1 ? 0 : a0 + (i / (N - 1)) * (a1 - a0));
         const nat = nativeFace(name);
         const need = needFace(ang);
         const flip = (nat === "left" || nat === "right") && need !== "front" && nat !== need;
@@ -715,6 +731,13 @@
     function renderTeam() {
       const root = document.getElementById("team");
       root.innerHTML = "";
+      let namesRoot = document.getElementById("seat-names");
+      if (!namesRoot) {
+        namesRoot = document.createElement("div");
+        namesRoot.id = "seat-names";
+        document.body.appendChild(namesRoot);
+      }
+      namesRoot.innerHTML = "";
       const names = roster();
       const seats = seatAngles(names);
       if (!seats.length) return;
@@ -723,17 +746,17 @@
       const fireBox = document.getElementById("fire").getBoundingClientRect();
       const fireX = fireBox.left + fireBox.width / 2;
       const fireY = fireBox.bottom;
-      const rx = Math.min(W * 0.38, 720);
-      const ry = Math.min(H * 0.168, 190);
-      const yMax = H - 8;
+      const rx = Math.min(W * 0.37, 700);
+      const ry = Math.min(H * 0.136, 148);
+      const yMax = H - 28;
       seats.forEach((seat, i) => {
         const ang = seat.ang;
         const name = seat.name;
         const x = fireX + rx * Math.sin(ang);
         const y = Math.min(yMax, fireY - ry * Math.cos(ang));
         const depth = (1 - Math.cos(ang)) / 2;
-        const scale = 0.74 + 0.34 * depth;
-        const avH = Math.max(100, Math.min(250, 176 * scale));
+        const scale = 0.70 + 0.30 * depth;
+        const avH = Math.max(100, Math.min(230, 168 * scale));
         const avW = avH * 0.72;
         const namePx = Math.max(11, Math.min(18, avH * 0.095));
         const z = 20 + Math.round(depth * 55);
@@ -751,18 +774,23 @@
           av.style.animationDuration = dur;
           av.style.animationDelay = delay;
         }
+        root.appendChild(cell);
         const nm = document.createElement("div");
         nm.className = "av-name";
         nm.textContent = name;
         nm.title = name;
-        nm.style.marginTop = "0.25vh";
+        const nameY = Math.min(y + 2, H - namePx - 8);
+        nm.style.left = x.toFixed(1) + "px";
+        nm.style.top = nameY.toFixed(1) + "px";
         nm.style.fontSize = namePx.toFixed(1) + "px";
         const deg = Math.abs(ang * 180 / Math.PI);
-        if (deg > 55 && deg < 130) {
-          nm.style.transform = "translateX(" + (ang < 0 ? "-18px" : "18px") + ")";
-        }
-        cell.appendChild(nm);
-        root.appendChild(cell);
+        let dx = 0;
+        if (deg > 65 && deg < 135) dx = ang < 0 ? -42 : 42;
+        if (/^modi$/i.test(name)) dx = -54;
+        if (/^hamdi$/i.test(name)) dx = 10;
+        if (/^mohammed$/i.test(name)) dx = 50;
+        nm.style.transform = "translate(calc(-50% + " + dx + "px), 2px)";
+        namesRoot.appendChild(nm);
       });
     }
 

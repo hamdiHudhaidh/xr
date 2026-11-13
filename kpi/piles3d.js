@@ -1,9 +1,11 @@
-/* Exact-count 3D piles: one headset per participant, one cube per engagement. */
+/* Exact-count 3D heaps: one headset per participant, one cube per engagement. */
 (function (global) {
   "use strict";
   const CAP = 20000;
+  const ASPECT_H = 0.7; /* wide, low mound; a little extra height so the heap reads in 3D */
+  const SAFE = { top: 0.22, bottom: 0.64, left: 0.05, right: 0.95 };
   let renderer, scene, camera, canvas;
-  let meshHeadset, meshCubeB, meshCubeW;
+  let meshBody, meshVisor, meshCubeB, meshCubeW;
   let dummy = null;
   let vTmp = null;
   let raf = 0;
@@ -11,6 +13,8 @@
   let lights = {};
   let heapMeta = [];
   let lastSig = "";
+  const ORIGIN_Z = 6.15;
+  let SPAN = 8.4;
 
   function seedRng(str) {
     let h = 2166136261;
@@ -60,88 +64,138 @@
     return g;
   }
 
-  function headsetGeom(THREE) {
-    const parts = [
-      boxAt(THREE, 1.70, 0.72, 0.58, 0, 0.48, 0),
-      boxAt(THREE, 1.78, 0.16, 0.36, 0, 0.84, -0.08),
-      boxAt(THREE, 1.36, 0.42, 0.22, 0, 0.44, 0.30),
-      boxAt(THREE, 0.18, 0.24, 0.90, -0.88, 0.44, 0.28, 0, 0.12, 0),
-      boxAt(THREE, 0.18, 0.24, 0.90, 0.88, 0.44, 0.28, 0, -0.12, 0),
-      boxAt(THREE, 0.22, 0.16, 0.22, -0.78, 0.18, 0.05),
-      boxAt(THREE, 0.22, 0.16, 0.22, 0.78, 0.18, 0.05)
-    ];
+  function scaleToWidth(g, width) {
+    g.computeBoundingBox();
+    const s = width / Math.max(1e-6, g.boundingBox.max.x - g.boundingBox.min.x);
+    g.scale(s, s, s);
+    g.computeBoundingBox();
+    g.translate(0, -g.boundingBox.min.y, 0);
+    g.computeBoundingBox();
+    g.computeBoundingSphere();
+    return s;
+  }
+
+  /* Iconic Quest-3 silhouette: one rounded white shell + a large dark front visor.
+     Unit width = 1, sitting on y = 0, visor on the -Z face. */
+  function headsetParts(THREE) {
+    const shell = roundedBoxGeom(THREE, 1.0, 0.50, 0.64, 0.15);
+    const brow = roundedBoxGeom(THREE, 0.92, 0.12, 0.36, 0.05);
+    brow.translate(0, 0.44, -0.08);
+    const body = mergeBufferGeometries(THREE, [shell, brow]);
+    shell.dispose();
+    brow.dispose();
+    const visor = roundedBoxGeom(THREE, 0.88, 0.36, 0.14, 0.06);
+    /* Front face of a 0.64-deep shell is at z ≈ -0.32; plant the visor there. */
+    visor.translate(0, 0.07, -0.44);
+    body.computeBoundingBox();
+    visor.computeBoundingBox();
+    const s = 1 / Math.max(1e-6, body.boundingBox.max.x - body.boundingBox.min.x);
+    body.scale(s, s, s);
+    visor.scale(s, s, s);
+    body.computeBoundingBox();
+    const dy = -body.boundingBox.min.y;
+    body.translate(0, dy, 0);
+    visor.translate(0, dy, 0);
+    body.computeBoundingBox();
+    body.computeBoundingSphere();
+    visor.computeBoundingBox();
+    visor.computeBoundingSphere();
+    return { body: body, visor: visor };
+  }
+
+  function roundedBoxGeom(THREE, sx, sy, sz, radius) {
+    const r = Math.min(radius, sx * 0.28, sy * 0.28, sz * 0.28);
+    const hx = sx / 2 - r, hy = sy / 2 - r, hz = sz / 2 - r;
+    const parts = [];
+    const segs = 6;
+    const corner = new THREE.SphereGeometry(r, segs, segs);
+    for (const x of [-hx, hx]) for (const y of [-hy, hy]) for (const z of [-hz, hz]) {
+      const g = corner.clone();
+      g.translate(x, y, z);
+      parts.push(g);
+    }
+    function cyl(len, rx, ry, rz, x, y, z) {
+      const g = new THREE.CylinderGeometry(r, r, len, segs, 1, true);
+      if (rx) g.rotateX(rx);
+      if (ry) g.rotateY(ry);
+      if (rz) g.rotateZ(rz);
+      g.translate(x, y, z);
+      parts.push(g);
+    }
+    const lx = sx - 2 * r, ly = sy - 2 * r, lz = sz - 2 * r;
+    for (const y of [-hy, hy]) for (const z of [-hz, hz]) cyl(lx, 0, 0, Math.PI / 2, 0, y, z);
+    for (const x of [-hx, hx]) for (const z of [-hz, hz]) cyl(ly, 0, 0, 0, x, 0, z);
+    for (const x of [-hx, hx]) for (const y of [-hy, hy]) cyl(lz, Math.PI / 2, 0, 0, x, y, 0);
+    parts.push(new THREE.BoxGeometry(lx, ly, sz));
+    parts.push(new THREE.BoxGeometry(sx, ly, lz));
+    parts.push(new THREE.BoxGeometry(lx, sy, lz));
     const g = mergeBufferGeometries(THREE, parts);
     parts.forEach(p => p.dispose());
-    g.computeBoundingBox();
-    const s = 0.20 / Math.max(1e-6, g.boundingBox.max.x - g.boundingBox.min.x);
-    g.scale(s, s, s);
-    g.translate(0, -g.boundingBox.min.y * s, 0);
+    corner.dispose();
+    g.translate(0, sy / 2, 0);
     g.computeBoundingBox();
     g.computeBoundingSphere();
     return g;
   }
 
-  function cubeGeom(THREE) {
-    const g = new THREE.BoxGeometry(1, 1, 1);
-    const s = 0.11;
-    g.scale(s, s, s);
-    g.translate(0, s / 2, 0);
-    g.computeBoundingBox();
-    g.computeBoundingSphere();
-    return g;
-  }
-
-  function settle(n, r, seed, spreadX, spreadZ) {
+  /* Wide, low, rounded mound. Height ≈ ASPECT_H × radius.
+     Build a full ellipsoid lattice, then keep the n points closest to the
+     centre so the pile is a solid 3D heap (not a flat filled disk). */
+  function settleMound(n, itemR, seed) {
+    const empty = { pos: [], R: itemR, H: itemR };
+    if (n <= 0) return empty;
     const rng = seedRng(seed);
-    const pos = [];
-    const minD = r * 1.76;
-    const cell = minD;
-    const hash = new Map();
-    function key(ix, iz) { return ix + ":" + iz; }
-    function neighbors(x, z) {
-      const ix = Math.floor(x / cell), iz = Math.floor(z / cell);
-      const out = [];
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dz = -1; dz <= 1; dz++) {
-          const arr = hash.get(key(ix + dx, iz + dz));
-          if (arr) for (let i = 0; i < arr.length; i++) out.push(arr[i]);
+    const spacing = itemR * 1.72;
+    const yStep = spacing * 0.58;
+    function lattice(R) {
+      const H = Math.max(itemR * 1.2, ASPECT_H * R);
+      const pts = [];
+      for (let y = itemR; y <= H + itemR * 0.02; y += yStep) {
+        const t = Math.min(1, Math.max(0, (y - itemR) / Math.max(H - itemR, itemR)));
+        const layerR = R * Math.sqrt(Math.max(0, 1 - t * t));
+        const rings = layerR < spacing * 0.4 ? 0 : Math.max(1, Math.round(layerR / spacing));
+        for (let k = 0; k <= rings; k++) {
+          const rad = rings === 0 ? 0 : (k / rings) * layerR;
+          const count = rad < spacing * 0.4 ? 1 : Math.max(1, Math.round((2 * Math.PI * rad) / spacing));
+          const rot = rng() * Math.PI * 2;
+          for (let i = 0; i < count; i++) {
+            const a = rot + (i + (rng() - 0.5) * 0.08) * (2 * Math.PI / Math.max(count, 1));
+            const rr = count === 1 ? rad + (rng() - 0.5) * itemR * 0.08 : rad + (rng() - 0.5) * spacing * 0.08;
+            const x = Math.cos(a) * rr;
+            const z = Math.sin(a) * rr;
+            const yy = y + (rng() - 0.5) * itemR * 0.08;
+            const d = (x * x + z * z) / (R * R) + ((yy - itemR) * (yy - itemR)) / (H * H);
+            pts.push({
+              x: x,
+              y: yy,
+              z: z,
+              d: d,
+              rx: (rng() - 0.5) * 0.7,
+              ry: rng() * Math.PI * 2,
+              rz: (rng() - 0.5) * 0.45,
+              s: 0.9 + rng() * 0.2,
+              faceCam: rng() < 0.7
+            });
+          }
         }
       }
-      return out;
+      pts.sort(function (a, b) { return a.d - b.d; });
+      return { pts: pts, R: R, H: H };
     }
-    function addHash(p) {
-      const k = key(Math.floor(p.x / cell), Math.floor(p.z / cell));
-      let arr = hash.get(k);
-      if (!arr) { arr = []; hash.set(k, arr); }
-      arr.push(p);
+    let R = itemR * (0.85 * Math.cbrt(Math.max(n, 1)) + 0.7);
+    let pack = lattice(R);
+    let guard = 0;
+    while (pack.pts.length < n && guard++ < 16) {
+      R *= 1.12;
+      pack = lattice(R);
     }
-    for (let i = 0; i < n; i++) {
-      const ang = rng() * Math.PI * 2;
-      const u = Math.sqrt(rng());
-      let x = Math.cos(ang) * u * spreadX;
-      let z = Math.sin(ang) * u * spreadZ;
-      let y = r;
-      const near = neighbors(x, z);
-      const lim = minD * minD;
-      for (let j = 0; j < near.length; j++) {
-        const p = near[j];
-        const dx = x - p.x, dz = z - p.z;
-        const d2 = dx * dx + dz * dz;
-        if (d2 < lim) {
-          const lift = p.y + Math.sqrt(Math.max(0, lim - d2));
-          if (lift > y) y = lift;
-        }
-      }
-      const rec = {
-        x: x, y: y, z: z,
-        rx: (rng() - 0.5) * 0.55,
-        ry: rng() * Math.PI * 2,
-        rz: (rng() - 0.5) * 0.4
-      };
-      pos.push(rec);
-      addHash(rec);
+    const pos = pack.pts.slice(0, n);
+    let maxRad = 0, maxY = itemR;
+    for (let i = 0; i < pos.length; i++) {
+      maxRad = Math.max(maxRad, Math.hypot(pos[i].x, pos[i].z));
+      maxY = Math.max(maxY, pos[i].y);
     }
-    return pos;
+    return { pos: pos, R: Math.max(itemR, maxRad), H: Math.max(itemR, maxY) };
   }
 
   function init(el) {
@@ -161,29 +215,50 @@
       renderer.setClearColor(0x000000, 0);
       renderer.setPixelRatio(Math.min(2, global.devicePixelRatio || 1));
       renderer.outputColorSpace = THREE.SRGBColorSpace || renderer.outputColorSpace;
+      if ("toneMappingExposure" in renderer) renderer.toneMappingExposure = 1.28;
       scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(30, 1, 0.1, 80);
+      camera = new THREE.PerspectiveCamera(28, 1, 0.1, 80);
 
-      const hemi = new THREE.HemisphereLight(0x8a78d0, 0x2a1820, 0.85);
+      scene.add(new THREE.AmbientLight(0xfff6ea, 0.48));
+      const hemi = new THREE.HemisphereLight(0xf4f0ff, 0x4a3420, 1.45);
       scene.add(hemi);
-      const moon = new THREE.DirectionalLight(0xfff2d0, 0.9);
-      moon.position.set(8, 10, 6);
+      const moon = new THREE.DirectionalLight(0xfff6e0, 1.85);
+      moon.position.set(7, 14, 5);
       scene.add(moon);
-      const fill = new THREE.DirectionalLight(0x6a80c8, 0.28);
-      fill.position.set(-6, 4, 4);
+      const fill = new THREE.DirectionalLight(0xc5d2f0, 0.62);
+      fill.position.set(-8, 6, 4);
       scene.add(fill);
-      const fire = new THREE.PointLight(0xff7a2a, 1.2, 24, 1.4);
-      fire.position.set(0, 0.9, 5.2);
+      const key = new THREE.DirectionalLight(0xfff8f0, 0.9);
+      key.position.set(0, 5.2, 12);
+      scene.add(key);
+      const fire = new THREE.PointLight(0xff8a33, 2.35, 28, 1.15);
+      fire.position.set(0, 1.2, 8.9);
       scene.add(fire);
       lights.fire = fire;
 
-      const matH = new THREE.MeshStandardMaterial({ color: 0xe8e0f8, roughness: 0.42, metalness: 0.14 });
-      const matB = new THREE.MeshStandardMaterial({ color: 0x161616, roughness: 0.35, metalness: 0.22 });
-      const matW = new THREE.MeshStandardMaterial({ color: 0xf4efe6, roughness: 0.4, metalness: 0.08 });
-      meshHeadset = new THREE.InstancedMesh(headsetGeom(THREE), matH, CAP);
-      meshCubeB = new THREE.InstancedMesh(cubeGeom(THREE), matB, CAP);
-      meshCubeW = new THREE.InstancedMesh(cubeGeom(THREE), matW, CAP);
-      [meshHeadset, meshCubeB, meshCubeW].forEach(m => {
+      const hs = headsetParts(THREE);
+      const matBody = new THREE.MeshStandardMaterial({
+        color: 0xf6f5f8, roughness: 0.32, metalness: 0.08,
+        emissive: 0xe8e4de, emissiveIntensity: 0.42
+      });
+      const matVisor = new THREE.MeshStandardMaterial({
+        color: 0x05060a, roughness: 0.1, metalness: 0.82,
+        emissive: 0x0a0c14, emissiveIntensity: 0.18
+      });
+      const matB = new THREE.MeshStandardMaterial({
+        color: 0x0b0b0d, roughness: 0.32, metalness: 0.22,
+        emissive: 0x161616, emissiveIntensity: 0.16
+      });
+      const matW = new THREE.MeshStandardMaterial({
+        color: 0xffffff, roughness: 0.28, metalness: 0.06,
+        emissive: 0xf2efe8, emissiveIntensity: 0.38
+      });
+      const cubeG = roundedBoxGeom(THREE, 1, 1, 1, 0.16);
+      meshBody = new THREE.InstancedMesh(hs.body, matBody, CAP);
+      meshVisor = new THREE.InstancedMesh(hs.visor, matVisor, CAP);
+      meshCubeB = new THREE.InstancedMesh(cubeG, matB, CAP);
+      meshCubeW = new THREE.InstancedMesh(cubeG, matW, CAP);
+      [meshBody, meshVisor, meshCubeB, meshCubeW].forEach(m => {
         m.frustumCulled = false;
         m.count = 0;
         m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -198,22 +273,19 @@
     }
   }
 
-  const ORIGIN_Z = 3.2;
-  let SPAN = 7.4;
-
   function resize() {
     if (!renderer || !canvas) return;
     const W = canvas.clientWidth || global.innerWidth || 1920;
     const H = canvas.clientHeight || global.innerHeight || 1080;
     renderer.setSize(W, H, false);
     camera.aspect = W / Math.max(1, H);
-    camera.fov = 26;
-    // Fixed downward view: day-row sits in the midground, just behind the seating circle.
-    camera.position.set(0, 6.4, 12.0);
-    camera.lookAt(0, 0, ORIGIN_Z);
+    camera.fov = 28;
+    /* Closer, slightly downward view of the clearing between the trees and the fire. */
+    camera.position.set(0, 3.55, 11.05);
+    camera.lookAt(0, 0.2, ORIGIN_Z);
     camera.updateProjectionMatrix();
     const dx = Math.abs(project(1, 0, ORIGIN_Z).x - project(0, 0, ORIGIN_Z).x) || 1;
-    SPAN = (0.90 * W) / dx;
+    SPAN = ((SAFE.right - SAFE.left) * W) / dx;
   }
 
   function project(x, y, z) {
@@ -223,13 +295,25 @@
     return { x: (vTmp.x * 0.5 + 0.5) * W, y: (-vTmp.y * 0.5 + 0.5) * H };
   }
 
-  function writeInstances(mesh, items, wx, wz) {
+  function writeInstances(mesh, items, wx, wz, scale, faceCam) {
+    if (!mesh) return;
     let n = mesh.count;
     for (let i = 0; i < items.length; i++) {
       if (n >= CAP) break;
       const p = items[i];
+      const s = scale * (p.s || 1);
       dummy.position.set(wx + p.x, p.y, wz + p.z);
-      dummy.rotation.set(p.rx, p.ry, p.rz);
+      if (faceCam && (p.faceCam !== false) && camera) {
+        const dx = camera.position.x - (wx + p.x);
+        const dy = camera.position.y - p.y;
+        const dz = camera.position.z - (wz + p.z);
+        const yaw = Math.atan2(dx, -dz);
+        const pitch = -Math.atan2(dy, Math.hypot(dx, dz) || 1);
+        dummy.rotation.set(pitch + (p.rx || 0) * 0.4, yaw + (p.ry || 0) * 0.32, (p.rz || 0) * 0.4);
+      } else {
+        dummy.rotation.set(p.rx || 0, p.ry || 0, p.rz || 0);
+      }
+      dummy.scale.set(s, s, s);
       dummy.updateMatrix();
       mesh.setMatrixAt(n, dummy.matrix);
       n++;
@@ -237,67 +321,107 @@
     mesh.count = n;
   }
 
+  function dayAnchor(i, n, span) {
+    const t = n === 1 ? 0.5 : i / (n - 1);
+    const recede = Math.abs(t - 0.5) * 2;
+    /* Gentle arc: centre closer to the camera (larger z). */
+    const wx = -span / 2 + span * t;
+    const wz = ORIGIN_Z + (1 - recede * recede) * 0.28;
+    return { t: t, recede: recede, wx: wx, wz: wz };
+  }
+
   function update(slots) {
     if (!renderer) return [];
     resize();
-    const sig = JSON.stringify(slots.map(s => [s.ymd, s.participants || 0, s.engagement || 0, s.index, slots.length]));
+    const sig = JSON.stringify(slots.map(s => [s.ymd, s.participants || 0, s.engagement || 0, s.index, slots.length])) + "|v3";
     const size = (canvas.clientWidth || 0) + "x" + (canvas.clientHeight || 0);
     const full = sig + "|" + size;
     if (full === lastSig && heapMeta.length) return heapMeta;
     lastSig = full;
 
-    meshHeadset.count = 0;
-    meshCubeB.count = 0;
-    meshCubeW.count = 0;
+    [meshBody, meshVisor, meshCubeB, meshCubeW].forEach(m => { m.count = 0; });
     heapMeta = [];
 
     const n = Math.max(slots.length, 1);
     const span = SPAN;
-    const originZ = ORIGIN_Z;
+    const W = canvas.clientWidth || global.innerWidth || 1920;
+    const H = canvas.clientHeight || global.innerHeight || 1080;
+    const slotW = span / n;
+    const maxP = Math.max(0, ...slots.map(s => s.participants || 0));
+    const maxE = Math.max(0, ...slots.map(s => s.engagement || 0));
+
+    /* Pick a unit item radius that keeps the busiest day's two heaps in their slot
+       and the tallest mound under the sky totals. Geometries are unit-sized. */
+    function moundR(count, itemR) { return settleMound(Math.max(1, count), itemR, "fit").R; }
+    let itemR = slotW * 0.2;
+    const unitP = maxP > 0 ? moundR(maxP, 1) : 1;
+    const unitE = maxE > 0 ? moundR(maxE, 1) : 1;
+    const widthUnits = (maxP > 0 ? unitP * 2 : 0) + (maxE > 0 ? unitE * 2 : 0) + (maxP > 0 && maxE > 0 ? 0.22 : 0);
+    if (widthUnits > 0) itemR = Math.min(itemR, (slotW * 1.34) / widthUnits);
+
+    const heightUnits = ASPECT_H * Math.max(maxP > 0 ? unitP : 0, maxE > 0 ? unitE : 0, 1);
+    const mid = dayAnchor(Math.floor((n - 1) / 2), n, span);
+    const groundPt = project(mid.wx, 0, mid.wz);
+    const upPt = project(mid.wx, 1, mid.wz);
+    const pxPerWorldY = Math.abs(groundPt.y - upPt.y) || 1;
+    const pxPerWorldX = Math.abs(project(mid.wx + 1, 0, mid.wz).x - groundPt.x) || 1;
+    const maxHpx = Math.max(40, groundPt.y - SAFE.top * H - 58);
+    if (heightUnits * pxPerWorldY * itemR > maxHpx) {
+      itemR = maxHpx / (heightUnits * pxPerWorldY);
+    }
+    /* Keep individual headsets/cubes readable (~12px wide), even if neighbouring heaps kiss. */
+    const minItemR = 18 / (2.35 * pxPerWorldX);
+    itemR = Math.max(itemR, minItemR, 0.018);
+    if (heightUnits * pxPerWorldY * itemR > maxHpx * 1.15) {
+      itemR = Math.max(minItemR * 0.85, maxHpx / (heightUnits * pxPerWorldY));
+    }
+    const instScale = itemR * 2.35; /* slightly chunkier than the packing radius */
 
     slots.forEach((s, i) => {
-      const t = n === 1 ? 0.5 : i / (n - 1);
-      const recede = Math.abs(t - 0.5) * 2;
-      const wx = -span / 2 + span * t;
-      const wz = originZ - recede * recede * 0.55;
+      const a = dayAnchor(i, n, span);
       const pN = Math.max(0, Math.floor(s.participants || 0));
       const eN = Math.max(0, Math.floor(s.engagement || 0));
       const filled = pN > 0 || eN > 0;
-      let maxY = 0.05;
-      if (filled) {
-        const pOff = eN > 0 ? -0.13 : 0;
-        const eOff = pN > 0 ? 0.13 : 0;
-        if (pN > 0) {
-          const items = settle(pN, 0.042, "p:" + s.ymd, 0.11, 0.18);
-          writeInstances(meshHeadset, items, wx + pOff, wz);
-          for (let k = 0; k < items.length; k++) if (items[k].y > maxY) maxY = items[k].y;
-        }
-        if (eN > 0) {
-          const items = settle(eN, 0.052, "e:" + s.ymd, 0.09, 0.15);
-          const black = [], white = [];
-          for (let k = 0; k < items.length; k++) (k % 2 === 0 ? black : white).push(items[k]);
-          writeInstances(meshCubeB, black, wx + eOff, wz);
-          writeInstances(meshCubeW, white, wx + eOff, wz);
-          for (let k = 0; k < items.length; k++) if (items[k].y > maxY) maxY = items[k].y;
-        }
-      }
-      const ground = project(wx, 0, wz);
-      const top = project(wx, maxY + 0.16, wz);
-      heapMeta.push({
+      const rec = {
         ymd: s.ymd,
         filled: filled,
-        groundX: ground.x,
-        groundY: ground.y,
-        topX: top.x,
-        topY: top.y,
-        participants: pN,
-        engagement: eN
-      });
+        groundX: project(a.wx, 0, a.wz).x,
+        groundY: project(a.wx, 0, a.wz).y,
+        p: null,
+        e: null
+      };
+      if (filled) {
+        const pM = pN > 0 ? settleMound(pN, itemR, "p:" + s.ymd) : null;
+        const eM = eN > 0 ? settleMound(eN, itemR, "e:" + s.ymd) : null;
+        const gap = itemR * 0.45;
+        const pWid = pM ? pM.R * 2 : 0;
+        const eWid = eM ? eM.R * 2 : 0;
+        let pOff = 0, eOff = 0;
+        if (pM && eM) {
+          pOff = -(eWid / 2 + gap / 2);
+          eOff = (pWid / 2 + gap / 2);
+        }
+        if (pM) {
+          writeInstances(meshBody, pM.pos, a.wx + pOff, a.wz, instScale, true);
+          writeInstances(meshVisor, pM.pos, a.wx + pOff, a.wz, instScale, true);
+          const top = project(a.wx + pOff, pM.H + itemR * 0.6, a.wz);
+          const g = project(a.wx + pOff, 0, a.wz);
+          rec.p = { n: pN, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: pM.H };
+        }
+        if (eM) {
+          const black = [], white = [];
+          for (let k = 0; k < eM.pos.length; k++) (k % 2 === 0 ? black : white).push(eM.pos[k]);
+          writeInstances(meshCubeB, black, a.wx + eOff, a.wz, instScale, false);
+          writeInstances(meshCubeW, white, a.wx + eOff, a.wz, instScale, false);
+          const top = project(a.wx + eOff, eM.H + itemR * 0.6, a.wz);
+          const g = project(a.wx + eOff, 0, a.wz);
+          rec.e = { n: eN, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: eM.H };
+        }
+      }
+      heapMeta.push(rec);
     });
 
-    meshHeadset.instanceMatrix.needsUpdate = true;
-    meshCubeB.instanceMatrix.needsUpdate = true;
-    meshCubeW.instanceMatrix.needsUpdate = true;
+    [meshBody, meshVisor, meshCubeB, meshCubeW].forEach(m => { m.instanceMatrix.needsUpdate = true; });
     return heapMeta;
   }
 
@@ -307,7 +431,7 @@
     function loop(t) {
       raf = global.requestAnimationFrame(loop);
       if (lights.fire) {
-        lights.fire.intensity = 1.1 + Math.sin(t * 0.007) * 0.16 + Math.sin(t * 0.019) * 0.08;
+        lights.fire.intensity = 1.85 + Math.sin(t * 0.007) * 0.2 + Math.sin(t * 0.019) * 0.1;
       }
       renderer.render(scene, camera);
     }
