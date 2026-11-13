@@ -625,7 +625,7 @@
       const rect = el.getBoundingClientRect();
       const W = Math.max(640, Math.round(rect.width) || 1200);
       const H = Math.max(280, Math.round(rect.height) || 480);
-      const padL = 54, padR = 22, padT = 42, padB = 50;
+      const padL = 54, padR = 22, padT = 84, padB = 50;
       const plotW = W - padL - padR;
       const plotH = H - padT - padB;
       const maxVal = Math.max.apply(null, days.map(d => Math.max(d.participants, d.engagement)).concat([0]));
@@ -634,27 +634,35 @@
       const usedW = Math.min(plotW, n * maxGroup);
       const origin = padL + (plotW - usedW) / 2;
       const groupW = usedW / n;
-      const pileGap = Math.max(8, Math.min(22, groupW * 0.08));
-      const maxPileW = Math.max(36, (groupW - pileGap) * 0.5);
+      const pileGap = Math.max(10, Math.min(24, groupW * 0.09));
+      const maxPileW = Math.max(36, (groupW - pileGap) * 0.48);
       const ASPECT_H = 117 / 160;
       const ASPECT_C = ((148 + 149) / 2) / 160;
       // Same icon height so both piles share a vertical scale. Headsets are wider.
-      const maxIconHByWidth = Math.min(maxPileW / 2.55 * ASPECT_H, maxPileW / 2.25 * ASPECT_C);
-      let iconH = Math.max(20, Math.min(72, maxIconHByWidth, plotH * 0.26));
+      const maxIconHByWidth = (maxPileW - 12) * ASPECT_H;
       const overlap = 0.225;
-      let step = iconH * (1 - overlap);
       const availH = Math.max(40, plotH);
-      const maxLayers = Math.max(1, 1 + (availH - iconH) / step);
-      const U = pickUnit(Math.max(1, maxVal), maxLayers);
+      const maxIconH = Math.max(20, Math.min(80, maxIconHByWidth, availH * 0.3));
+      const targetIconH = Math.min(58, maxIconH);
+      const niceU = [1, 2, 5, 10, 15, 20, 25, 50, 100, 200, 250, 500, 1000];
+      let U = niceU[0], iconH = 20;
+      for (let i = 0; i < niceU.length; i++) {
+        const u = niceU[i];
+        const nMax = Math.max(maxVal / u, 0.0001);
+        const factor = nMax <= 1 ? Math.max(nMax, 0.001) : (1 + (nMax - 1) * (1 - overlap));
+        const h = Math.min(maxIconH, availH / factor);
+        if (h >= targetIconH - 0.5) { U = u; iconH = h; break; }
+        if (h > iconH) { U = u; iconH = h; }
+      }
+      iconH = Math.max(20, Math.min(maxIconH, iconH));
+      let step = iconH * (1 - overlap);
       const maxY = niceMax(Math.max(maxVal, U));
-      // Fit the tallest pile into availH and keep overlap near 20–25%.
       const nMax = Math.max(maxVal / U, 1);
       if (nMax > 1) {
         const target = availH * (maxVal / maxY);
         const fitted = (target - iconH) / (nMax - 1);
         if (fitted > iconH * 0.68 && fitted < iconH * 0.86) step = fitted;
         else if (fitted <= iconH * 0.68) {
-          // Need a coarser scale / smaller icons so they nest without overflowing.
           const needH = iconH + (nMax - 1) * (iconH * 0.75);
           if (needH > availH) {
             const scale = availH / needH;
@@ -665,7 +673,6 @@
       }
       const iconWp = iconH / ASPECT_H;
       const iconWe = iconH / ASPECT_C;
-      const wideOk = Math.min(iconWp, iconWe) >= 22 && maxPileW >= Math.max(iconWp, iconWe) * 1.55;
       const yOf = v => padT + availH * (1 - v / maxY);
       const pileH = function (v) {
         if (v <= 0) return 0;
@@ -696,44 +703,27 @@
         const layerCount = Math.ceil(layersN - 1e-9);
         const items = [];
         if (value <= 0 || layerCount <= 0) return items;
-        const useWide = wideOk && layersN >= 2;
-        // Wide base, only the top one or two layers taper to a single peak.
-        const twoWide = useWide ? Math.max(1, layerCount - (layerCount >= 6 ? 2 : 1)) : 0;
         for (let i = 0; i < layerCount; i++) {
-          const width = i < twoWide ? 2 : 1;
           const sit = baseY - i * step;
           const isTop = i === layerCount - 1;
           const partial = (isTop && layersN < layerCount) ? Math.max(0.12, layersN - (layerCount - 1)) : 1;
-          let dropK = -1;
-          if (width === 2) dropK = rng() < 0.5 ? 0 : 1;
-          const rowShift = (i % 2 === 0 ? -1 : 1) * iw * (0.06 + rng() * 0.07);
-          for (let k = 0; k < width; k++) {
-            const amt = 0.10 + rng() * 0.10;
-            const rotAmt = 8 + rng() * 4;
-            const side = width === 2 ? (k === 0 ? -1 : 1) : ((i % 2 === 0 ? -1 : 1) * (rng() < 0.25 ? -1 : 1));
-            const dx = side * amt * iw;
-            const rot = side * rotAmt * (rng() < 0.2 ? -0.8 : 1);
-            let x;
-            if (width === 2) {
-              const sep = iw * 0.58;
-              x = cx + (k === 0 ? -sep : sep) - iw / 2 + dx * 0.7 + rowShift;
-            } else {
-              x = cx - iw / 2 + dx + rowShift * 0.5;
-            }
-            const drop = (k === dropK) ? iconH * (0.06 + rng() * 0.05) : 0;
-            const y = sit - iconH + drop;
-            items.push({
-              x: x,
-              y: y,
-              w: iw,
-              h: iconH,
-              rot: rot,
-              cx: x + iw / 2,
-              cy: y + iconH * 0.62,
-              partial: partial,
-              layer: i
-            });
-          }
+          // Tight single column: a few px of zig-zag and a slight tilt, seeded.
+          const side = (i % 2 === 0 ? -1 : 1) * (rng() < 0.18 ? -1 : 1);
+          const dx = side * (2 + rng() * 3);
+          const rot = side * (3 + rng() * 1);
+          const x = cx - iw / 2 + dx;
+          const y = sit - iconH;
+          items.push({
+            x: x,
+            y: y,
+            w: iw,
+            h: iconH,
+            rot: rot,
+            cx: x + iw / 2,
+            cy: y + iconH * 0.62,
+            partial: partial,
+            layer: i
+          });
         }
         return items;
       }
@@ -750,20 +740,16 @@
         return top;
       }
 
+      const totFs = Math.max(22, Math.min(groupW * 0.22, 38));
       let defs = '<filter id="pileShade" x="-20%" y="-10%" width="140%" height="140%"><feDropShadow dx="0" dy="1.2" stdDeviation="1.1" flood-color="#000" flood-opacity="0.32"/></filter>';
-      let behind = "";
       let piles = "";
       let labels = "";
 
       days.forEach((d, i) => {
         const mid = origin + groupW * i + groupW / 2;
-        const half = Math.min(maxPileW, groupW * 0.42) / 2;
+        const half = Math.min(maxPileW, Math.max(iconWp, iconWe) * 0.62 + pileGap * 0.2);
         const cxP = mid - pileGap / 2 - half;
         const cxE = mid + pileGap / 2 + half;
-
-        const taller = Math.max(d.participants, d.engagement);
-        const wmY = baseY - Math.max(pileH(taller) * 0.28, 22);
-        behind += '<text x="' + mid + '" y="' + wmY.toFixed(1) + '" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.13)" font-size="' + Math.max(26, Math.min(groupW * 0.36, availH * 0.34, 88)).toFixed(1) + '" font-weight="800" font-family="Cairo, system-ui, sans-serif" font-variant-numeric="tabular-nums">' + fmt(d.total) + '</text>';
 
         function drawSeries(kind, value, cx, iw, color) {
           const rng = seedRng(kind + ":" + d.ymd + ":" + String(U));
@@ -771,8 +757,8 @@
           const targetTop = baseY - pileH(value);
           const clipId = "pc-" + kind + i;
           if (items.length) {
-            const minX = Math.min.apply(null, items.map(it => it.x)) - 24;
-            const maxX = Math.max.apply(null, items.map(it => it.x + it.w)) + 24;
+            const minX = Math.min.apply(null, items.map(it => it.x)) - 16;
+            const maxX = Math.max.apply(null, items.map(it => it.x + it.w)) + 16;
             defs += '<clipPath id="' + clipId + '"><rect x="' + minX.toFixed(1) + '" y="' + targetTop.toFixed(1) + '" width="' + (maxX - minX).toFixed(1) + '" height="' + (baseY - targetTop + iconH).toFixed(1) + '"/></clipPath>';
             piles += '<g clip-path="url(#' + clipId + ')">';
             items.forEach((it, j) => {
@@ -782,12 +768,15 @@
             piles += '</g>';
           }
           const visTop = pileVisualTop(items, value > 0 ? targetTop : baseY);
-          const ly = Math.max(16, visTop - 8);
+          const ly = visTop - 8;
           labels += '<text x="' + cx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" fill="' + color + '" font-size="' + valFs + '" font-weight="800" font-family="Cairo, system-ui, sans-serif" stroke="rgba(28,10,77,0.88)" stroke-width="3.2" paint-order="stroke">' + fmt(value) + '</text>';
+          return ly;
         }
 
-        drawSeries("p", d.participants, cxP, iconWp, "#c4a0ff");
-        drawSeries("e", d.engagement, cxE, iconWe, "#EAF04A");
+        const lyP = drawSeries("p", d.participants, cxP, iconWp, "#c4a0ff");
+        const lyE = drawSeries("e", d.engagement, cxE, iconWe, "#EAF04A");
+        const totY = Math.max(totFs + 6, Math.min(lyP, lyE) - valFs - 14);
+        labels += '<text x="' + mid + '" y="' + totY.toFixed(1) + '" text-anchor="middle" fill="rgba(255,255,255,0.16)" font-size="' + totFs.toFixed(1) + '" font-weight="800" font-family="Cairo, system-ui, sans-serif" font-variant-numeric="tabular-nums">' + fmt(d.total) + '</text>';
 
         const p = dayParts(d.ymd);
         const mon = (p.mon !== "Nov") ? " " + p.mon : "";
@@ -796,7 +785,7 @@
       });
 
       el.setAttribute("data-scale", String(U));
-      el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Participants and engagement by day"><defs>' + defs + '</defs>' + grid + behind + piles + labels + '</svg>';
+      el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Participants and engagement by day"><defs>' + defs + '</defs>' + grid + piles + labels + '</svg>';
     }
 
     function appendMember(parent, name, j, avW, avH, namePx, nameGap) {
