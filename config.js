@@ -15,7 +15,8 @@
   window.XR_LAST_DAY = "2026-11-30";
   /* Resolve the team and people for one date + session from the stored data.
      data = { teams:[{id,name,people:[]}], daily:{ "1":teamId,... },
-              days:{ "YYYY-MM-DD": { "1": teamId | "" } }, swaps:{ "YYYY-MM-DD|1": [{from,to}] } } */
+              days:{ "YYYY-MM-DD": { "1": teamId | "" } }, swaps:{ "YYYY-MM-DD|1": [{from,to}] },
+              offDays:{ "YYYY-MM-DD": ["Name", ...] } } */
   window.XR_resolve = function (data, ymd, s) {
     data = data || {};
     var key = String(s);

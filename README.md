@@ -11,7 +11,7 @@ Optional: `?img=3` shows the poster for 3 seconds, useful for testing the video 
 ## /in, /out, /admin
 
 - `/out/` (and `/`): poster 60 s, then the video, looped.
-- `/in/`: schedule only, with finished sessions greyed, and today's assigned people shown as rocking avatars (or initials) with names underneath. Swaps are applied. Test with `?now=HH:MM&date=YYYY-MM-DD`.
-- `/admin/`: teams, per-person photos, session assignments (a default for every day, plus per-day changes) and per-session swaps. Data lives in the `xr-admin-api` Cloudflare Worker (`worker/`), whose URL goes in `config.js` (`XR_API`).
+- `/in/`: schedule only, with finished sessions greyed, and today's assigned people shown as rocking avatars (or initials) with names underneath. Swaps are applied. People marked off for that date appear in an Off today panel beside the schedule. Test with `?now=HH:MM&date=YYYY-MM-DD`.
+- `/admin/`: teams, per-person photos, session assignments (a default for every day, plus per-day changes), per-session swaps, and per-date off days. Data lives in the `xr-admin-api` Cloudflare Worker (`worker/`), whose URL goes in `config.js` (`XR_API`).
 
 Worker: `cd worker && npx wrangler deploy`, then `npx wrangler secret put ADMIN_PASSCODE`. Local test: `npx wrangler dev --local` (passcode in `worker/.dev.vars`), then open `http://127.0.0.1:8765/admin/?api=http://127.0.0.1:8787`.

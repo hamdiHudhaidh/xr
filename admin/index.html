@@ -38,7 +38,7 @@
   .hint { color: var(--muted); font-size: 13px; margin: 2px 2px 12px; }
   .row { display: flex; gap: 8px; align-items: center; }
   .row > input { flex: 1; min-width: 0; }
-  input[type=text], input[type=password], select {
+  input[type=text], input[type=password], input[type=date], select {
     background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; outline: none; width: 100%;
   }
   input:focus, select:focus { border-color: var(--yellow); }
@@ -122,6 +122,19 @@
   .gate input { text-align: center; font-size: 22px; letter-spacing: .3em; margin: 14px 0 10px; }
   .err-text { color: #ffb3d6; min-height: 20px; font-size: 13px; }
   .banner { background: var(--pink); color: #fff; padding: 10px 14px; border-radius: 16px; margin-bottom: 12px; font-weight: 600; }
+  .off-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .off-head h2 { margin: 0; font-size: 16px; font-weight: 800; }
+  .off-head h2 span { color: var(--yellow); }
+  .off-head .off-date { width: auto; flex: none; }
+  .off-summary { color: var(--muted); font-size: 13px; margin: 8px 2px 0; }
+  .off-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .off-chip {
+    border: 1px solid var(--line); background: rgba(255,255,255,.1); border-radius: 999px;
+    padding: 7px 12px; font-weight: 700; cursor: pointer; color: #fff;
+  }
+  .off-chip.on { background: var(--yellow); color: var(--purple); border-color: var(--yellow); }
+  .off-team { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .04em; margin: 10px 0 6px; }
+  .off-team:first-child { margin-top: 0; }
   @media (max-width: 520px) { .wrap { padding: 10px 10px 80px; } .card { padding: 12px; border-radius: 18px; } }
 </style>
 </head>
@@ -160,9 +173,27 @@
   const ui = { tab: new URLSearchParams(location.search).get("tab") || "teams", day: DATES.includes(today) ? today : "default", rosterDay: DATES.includes(today) ? today : DATES[0], swapping: null };
   let saveTimer = null, dirty = false, statusText = "", statusCls = "";
 
+  function normalizeOffDays(raw) {
+    const out = {};
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+    for (const k of Object.keys(raw)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+      const names = Array.isArray(raw[k]) ? raw[k] : [];
+      const seen = new Set();
+      const list = [];
+      for (const n of names) {
+        const name = String(n || "").trim();
+        if (!name || name.length > 80 || seen.has(name)) continue;
+        seen.add(name);
+        list.push(name);
+      }
+      if (list.length) out[k] = list;
+    }
+    return out;
+  }
   function normalize(d) {
     d = d && typeof d === "object" ? d : {};
-    return { version: 1, teams: Array.isArray(d.teams) ? d.teams : [], daily: d.daily || {}, days: d.days || {}, swaps: d.swaps || {}, updatedAt: d.updatedAt || null };
+    return { version: 1, teams: Array.isArray(d.teams) ? d.teams : [], daily: d.daily || {}, days: d.days || {}, swaps: d.swaps || {}, offDays: normalizeOffDays(d.offDays), updatedAt: d.updatedAt || null };
   }
 
   async function api(method, body, extra) {
@@ -440,7 +471,7 @@
     return `<div class="days" id="${id}">
       ${withDefault ? `<button class="def ${cur === "default" ? "on" : ""}" data-day="default"><b>Every day</b><small>default</small></button>` : ""}
       ${DATES.map(d => {
-        const has = withDefault && (Object.keys(data.days[d] || {}).length || Object.keys(data.swaps).some(k => k.startsWith(d + "|") && data.swaps[k].length));
+        const has = withDefault && (Object.keys(data.days[d] || {}).length || Object.keys(data.swaps).some(k => k.startsWith(d + "|") && data.swaps[k].length) || (data.offDays[d] || []).length);
         return `<button class="${cur === d ? "on" : ""} ${has ? "has" : ""}" data-day="${d}"><small>${dow(d)}${d === today ? " · today" : ""}</small><b>${Number(d.slice(8))}</b></button>`;
       }).join("")}</div>`;
   }
@@ -482,7 +513,43 @@
         ${note ? `<div class="tagline">${note}</div>` : ""}${people}</div></div>`;
     }).join("");
     const all = [...new Set(data.teams.flatMap(t => t.people))];
-    return `${dayStrip(day, true, "dayStrip")}${bar}${items}<datalist id="allPeople">${all.map(p => `<option value="${esc(p)}">`).join("")}</datalist>`;
+    const offCard = isDef
+      ? `<div class="card"><div class="hint" style="margin:0">Pick a day above to mark who is off that day. Off days are set per date, not as a default.</div></div>`
+      : renderOffCard(day);
+    return `${dayStrip(day, true, "dayStrip")}${bar}${offCard}${items}<datalist id="allPeople">${all.map(p => `<option value="${esc(p)}">`).join("")}</datalist>`;
+  }
+
+  function renderOffCard(day) {
+    const off = new Set(data.offDays[day] || []);
+    const inTeams = new Set();
+    const groups = data.teams.map(t => {
+      const people = (t.people || []).filter(Boolean);
+      people.forEach(p => inTeams.add(p));
+      return { name: t.name, people };
+    }).filter(g => g.people.length);
+    const extra = [...off].filter(n => !inTeams.has(n));
+    if (extra.length) groups.push({ name: "Other", people: extra });
+    if (!groups.length) {
+      return `<div class="card" id="offCard">
+        <div class="off-head"><h2>Off <span>this day</span></h2>
+          <input type="date" class="off-date" id="offDate" value="${esc(day)}" aria-label="Off day date"></div>
+        <div class="empty">Add people on the Teams tab first, then you can mark who is off.</div></div>`;
+    }
+    const showTeam = groups.length > 1;
+    const chips = groups.map(g =>
+      `${showTeam ? `<div class="off-team">${esc(g.name)}</div>` : ""}<div class="off-chips">${g.people.map(p =>
+        `<button type="button" class="off-chip${off.has(p) ? " on" : ""}" data-act="toggleoff" data-name="${esc(p)}" aria-pressed="${off.has(p) ? "true" : "false"}">${esc(p)}</button>`
+      ).join("")}</div>`
+    ).join("");
+    const n = off.size;
+    const summary = n ? n + " off this day: " + [...off].map(esc).join(", ") : "Nobody is marked off on this day.";
+    return `<div class="card" id="offCard">
+      <div class="off-head"><h2>Off <span>this day</span></h2>
+        <input type="date" class="off-date" id="offDate" value="${esc(day)}" aria-label="Off day date"></div>
+      <div class="hint">Tap a name to mark them off. They still stay on their sessions, and they appear beside the schedule on the /in page.</div>
+      ${chips}
+      <div class="off-summary">${summary}</div>
+    </div>`;
   }
 
   function renderRoster() {
@@ -563,6 +630,22 @@
 
     app.querySelectorAll("#dayStrip [data-day]").forEach(b => b.onclick = () => { ui.day = b.dataset.day; ui.swapping = null; render(); });
     app.querySelectorAll("#rosterStrip [data-day]").forEach(b => b.onclick = () => { ui.rosterDay = b.dataset.day; render(); });
+    const od = document.getElementById("offDate");
+    if (od) od.onchange = () => {
+      const v = od.value;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return;
+      ui.day = v; ui.swapping = null; render();
+    };
+    app.querySelectorAll("[data-act=toggleoff]").forEach(b => b.onclick = () => {
+      if (ui.day === "default") return;
+      const name = b.dataset.name;
+      change(() => {
+        const cur = new Set(data.offDays[ui.day] || []);
+        if (cur.has(name)) cur.delete(name); else cur.add(name);
+        if (cur.size) data.offDays[ui.day] = [...cur];
+        else delete data.offDays[ui.day];
+      });
+    });
     const strip = document.querySelector("section.on .days .on"); if (strip) strip.scrollIntoView({ block: "nearest", inline: "center" });
 
     app.querySelectorAll("select[data-sess]").forEach(sel => sel.onchange = () => {
