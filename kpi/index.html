@@ -625,7 +625,7 @@
       const rect = el.getBoundingClientRect();
       const W = Math.max(640, Math.round(rect.width) || 1200);
       const H = Math.max(280, Math.round(rect.height) || 480);
-      const padL = 54, padR = 22, padT = 84, padB = 50;
+      const padL = 54, padR = 22, padT = 92, padB = 50;
       const plotW = W - padL - padR;
       const plotH = H - padT - padB;
       const maxVal = Math.max.apply(null, days.map(d => Math.max(d.participants, d.engagement)).concat([0]));
@@ -646,10 +646,14 @@
       const targetIconH = Math.min(58, maxIconH);
       const niceU = [1, 2, 5, 10, 15, 20, 25, 50, 100, 200, 250, 500, 1000];
       let U = niceU[0], iconH = 20;
+      function wholeCount(v, u) {
+        if (!(v > 0)) return 0;
+        return Math.max(1, Math.round(v / u));
+      }
       for (let i = 0; i < niceU.length; i++) {
         const u = niceU[i];
-        const nMax = Math.max(maxVal / u, 0.0001);
-        const factor = nMax <= 1 ? Math.max(nMax, 0.001) : (1 + (nMax - 1) * (1 - overlap));
+        const nMax = Math.max(1, wholeCount(maxVal, u) || 1);
+        const factor = nMax <= 1 ? 1 : (1 + (nMax - 1) * (1 - overlap));
         const h = Math.min(maxIconH, availH / factor);
         if (h >= targetIconH - 0.5) { U = u; iconH = h; break; }
         if (h > iconH) { U = u; iconH = h; }
@@ -657,7 +661,7 @@
       iconH = Math.max(20, Math.min(maxIconH, iconH));
       let step = iconH * (1 - overlap);
       const maxY = niceMax(Math.max(maxVal, U));
-      const nMax = Math.max(maxVal / U, 1);
+      const nMax = Math.max(1, wholeCount(maxVal, U) || 1);
       if (nMax > 1) {
         const target = availH * (maxVal / maxY);
         const fitted = (target - iconH) / (nMax - 1);
@@ -674,11 +678,12 @@
       const iconWp = iconH / ASPECT_H;
       const iconWe = iconH / ASPECT_C;
       const yOf = v => padT + availH * (1 - v / maxY);
+      const iconCount = function (v) { return wholeCount(v, U); };
       const pileH = function (v) {
-        if (v <= 0) return 0;
-        const layers = v / U;
-        if (layers <= 1) return iconH * layers;
-        return iconH + (layers - 1) * step;
+        const c = iconCount(v);
+        if (c <= 0) return 0;
+        if (c === 1) return iconH;
+        return iconH + (c - 1) * step;
       };
       const labelFs = n > 14 ? 11 : n > 9 ? 13 : 15;
       const valFs = n > 14 ? 11 : n > 9 ? 13 : 15;
@@ -699,14 +704,11 @@
       const SRC_EW = "../assets/chibi-block-white.png";
 
       function layoutPile(kind, value, cx, iw, rng) {
-        const layersN = value / U;
-        const layerCount = Math.ceil(layersN - 1e-9);
+        const layerCount = iconCount(value);
         const items = [];
-        if (value <= 0 || layerCount <= 0) return items;
+        if (layerCount <= 0) return items;
         for (let i = 0; i < layerCount; i++) {
           const sit = baseY - i * step;
-          const isTop = i === layerCount - 1;
-          const partial = (isTop && layersN < layerCount) ? Math.max(0.12, layersN - (layerCount - 1)) : 1;
           // Tight single column: a few px of zig-zag and a slight tilt, seeded.
           const side = (i % 2 === 0 ? -1 : 1) * (rng() < 0.18 ? -1 : 1);
           const dx = side * (2 + rng() * 3);
@@ -721,7 +723,6 @@
             rot: rot,
             cx: x + iw / 2,
             cy: y + iconH * 0.62,
-            partial: partial,
             layer: i
           });
         }
@@ -734,8 +735,7 @@
         items.forEach(it => {
           const rad = Math.abs(it.rot) * Math.PI / 180;
           const ext = Math.sin(rad) * (it.w / 2) + (1 - Math.cos(rad)) * (it.h / 2);
-          const visibleTop = it.y + (1 - it.partial) * it.h;
-          top = Math.min(top, visibleTop - ext);
+          top = Math.min(top, it.y - ext);
         });
         return top;
       }
@@ -755,12 +755,8 @@
           const rng = seedRng(kind + ":" + d.ymd + ":" + String(U));
           const items = layoutPile(kind, value, cx, iw, rng);
           const targetTop = baseY - pileH(value);
-          const clipId = "pc-" + kind + i;
           if (items.length) {
-            const minX = Math.min.apply(null, items.map(it => it.x)) - 16;
-            const maxX = Math.max.apply(null, items.map(it => it.x + it.w)) + 16;
-            defs += '<clipPath id="' + clipId + '"><rect x="' + minX.toFixed(1) + '" y="' + targetTop.toFixed(1) + '" width="' + (maxX - minX).toFixed(1) + '" height="' + (baseY - targetTop + iconH).toFixed(1) + '"/></clipPath>';
-            piles += '<g clip-path="url(#' + clipId + ')">';
+            piles += '<g>';
             items.forEach((it, j) => {
               const src = kind === "p" ? SRC_P : (j % 2 === 0 ? SRC_EB : SRC_EW);
               piles += '<image href="' + src + '" x="' + it.x.toFixed(2) + '" y="' + it.y.toFixed(2) + '" width="' + it.w.toFixed(2) + '" height="' + it.h.toFixed(2) + '" preserveAspectRatio="xMidYMid meet" transform="rotate(' + it.rot.toFixed(2) + ' ' + it.cx.toFixed(2) + ' ' + it.cy.toFixed(2) + ')" filter="url(#pileShade)"/>';
@@ -768,7 +764,7 @@
             piles += '</g>';
           }
           const visTop = pileVisualTop(items, value > 0 ? targetTop : baseY);
-          const ly = visTop - 8;
+          const ly = visTop - 10;
           labels += '<text x="' + cx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" fill="' + color + '" font-size="' + valFs + '" font-weight="800" font-family="Cairo, system-ui, sans-serif" stroke="rgba(28,10,77,0.88)" stroke-width="3.2" paint-order="stroke">' + fmt(value) + '</text>';
           return ly;
         }
