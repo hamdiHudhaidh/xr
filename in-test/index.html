@@ -150,6 +150,8 @@
     /* Avatar test: row of rocking circular photos in place of names. */
     .team.avatars {
       flex-direction: row;
+      align-items: center;
+      justify-content: center;
       overflow: visible;
       background: rgba(36, 16, 99, 0.94);
       box-shadow: 0 0.2vmin 0.8vmin rgba(10, 0, 40, 0.35);
@@ -159,6 +161,29 @@
       background: rgba(58, 53, 80, 0.94);
       box-shadow: none;
     }
+    .member {
+      flex: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .av-name {
+      width: 100%;
+      text-align: center;
+      color: #EAF04A;
+      font-family: Cairo, "Noto Sans Arabic", "Segoe UI", system-ui, -apple-system, sans-serif;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      unicode-bidi: plaintext;
+    }
+    .team.past .av-name { color: #d6d3df; }
     .av {
       flex: none;
       border-radius: 50%;
@@ -442,8 +467,9 @@
         return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
       }
       // Free space between the TO time and the FROM label, centred on the arrow (poster px).
+      // Taller than the name-only chip so the avatar and the label both fit.
       const ARROW_X = [320, 320, 320, 320, 320, 320, 332, 320];
-      const ZONE_W = 260, ZONE_TOP = 13, ZONE_H = 65;
+      const ZONE_W = 296, ZONE_TOP = 5, ZONE_H = 81;
       let teamData = null;
       let avatars = {};
       function renderTeams(now) {
@@ -458,19 +484,25 @@
           el.className = "team avatars" + (now.mins >= toMin(b) ? " past" : "");
           place(el, i, ARROW_X[i] - ZONE_W / 2, ZONE_TOP, ZONE_W, ZONE_H);
           const n = people.length;
-          const padX = 12, padY = 7;
-          const gap = n <= 3 ? 10 : n <= 4 ? 8 : n <= 6 ? 6 : 4;
+          const padX = 8, padY = 5;
+          const gap = n <= 3 ? 8 : n <= 4 ? 5 : n <= 6 ? 4 : 3;
           const availW = ZONE_W - padX * 2;
-          const availH = ZONE_H - padY * 2;
-          let size = Math.min(availH, Math.floor((availW - gap * Math.max(0, n - 1)) / n));
-          size = Math.max(18, size);
+          const colW = (availW - gap * Math.max(0, n - 1)) / n;
+          // Name first: at least 9 screen px so it stays readable in portrait, then the avatar takes the leftover height.
+          const namePx = Math.max(9, 13.5 * unit);
+          const nameGap = Math.max(1.5, 2 * unit);
+          const availH = (ZONE_H - padY * 2) * unit;
+          const sizePx = Math.max(16, Math.min((colW * unit), availH - namePx * 1.15 - nameGap));
           el.style.gap = (gap * unit) + "px";
-          el.style.padding = "0 " + (padX * unit) + "px";
+          el.style.padding = (padY * unit) + "px " + (padX * unit) + "px";
           people.forEach((p, j) => {
+            const cell = document.createElement("div");
+            cell.className = "member";
+            cell.style.width = (colW * unit).toFixed(2) + "px";
             const src = avatars[p.name];
             const av = document.createElement(src ? "img" : "div");
             av.className = "av" + (src ? "" : " fallback");
-            const px = (size * unit).toFixed(2) + "px";
+            const px = sizePx.toFixed(2) + "px";
             av.style.width = px;
             av.style.height = px;
             av.style.animationDuration = (2.2 + (j % 4) * 0.22) + "s";
@@ -485,11 +517,28 @@
               const col = colorFor(p.name);
               av.style.background = col.bg;
               av.style.color = col.fg;
-              av.style.fontSize = (size * unit * 0.42).toFixed(2) + "px";
+              av.style.fontSize = (sizePx * 0.42).toFixed(2) + "px";
             }
-            el.appendChild(av);
+            const nm = document.createElement("div");
+            nm.className = "av-name";
+            nm.textContent = p.name;
+            nm.title = p.name;
+            nm.style.marginTop = nameGap.toFixed(2) + "px";
+            nm.style.fontSize = namePx.toFixed(2) + "px";
+            cell.appendChild(av);
+            cell.appendChild(nm);
+            el.appendChild(cell);
           });
           teamLayer.appendChild(el);
+          el.querySelectorAll(".av-name").forEach(nm => {
+            // Shrink a little so short and long names stay in the same range, then ellipsize.
+            let fs = namePx;
+            const minFs = Math.max(namePx * 0.88, Math.min(namePx, 9));
+            while (fs > minFs + 0.05 && nm.scrollWidth > nm.clientWidth + 0.5) {
+              fs -= 0.3;
+              nm.style.fontSize = fs.toFixed(2) + "px";
+            }
+          });
         });
       }
       async function loadTeams() {
@@ -506,6 +555,10 @@
         updateHighlight();
       }
       window.addEventListener("resize", () => { layoutBox(); updateHighlight(); });
+      if (document.fonts) {
+        document.fonts.load("700 14px Cairo").catch(() => {});
+        document.fonts.ready.then(() => updateHighlight());
+      }
       loadTeams();
       setInterval(loadTeams, 45000);
       window.addEventListener("resize", layoutBox);
