@@ -29,6 +29,7 @@
   .status.ok { color: var(--yellow); }
   .status.err { background: var(--pink); color: #fff; }
   .lock { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  a.lock { text-decoration: none; display: inline-block; }
   nav.tabs { display: flex; gap: 6px; background: rgba(0,0,0,.18); padding: 5px; border-radius: 999px; position: sticky; top: 8px; z-index: 5; backdrop-filter: blur(8px); }
   nav.tabs button { flex: 1; border: 0; background: none; padding: 9px 6px; border-radius: 999px; font-weight: 700; cursor: pointer; color: var(--muted); }
   nav.tabs button.on { background: var(--yellow); color: var(--purple); }
@@ -173,6 +174,32 @@
   const ui = { tab: new URLSearchParams(location.search).get("tab") || "teams", day: DATES.includes(today) ? today : "default", rosterDay: DATES.includes(today) ? today : DATES[0], swapping: null };
   let saveTimer = null, dirty = false, statusText = "", statusCls = "";
 
+  function clampCount(n) {
+    n = Math.round(Number(n));
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.min(9999, n);
+  }
+  function normalizeNumbers(raw) {
+    const out = {};
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+    for (const k of Object.keys(raw)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+      const day = raw[k];
+      if (!day || typeof day !== "object" || Array.isArray(day)) continue;
+      const sess = {};
+      for (const s of Object.keys(day)) {
+        if (!/^[1-8]$/.test(s)) continue;
+        const v = day[s];
+        if (!v || typeof v !== "object" || Array.isArray(v)) continue;
+        const rec = {};
+        if (Number.isFinite(Number(v.participants))) rec.participants = clampCount(v.participants);
+        if (Number.isFinite(Number(v.engagement))) rec.engagement = clampCount(v.engagement);
+        if ("participants" in rec || "engagement" in rec) sess[s] = rec;
+      }
+      if (Object.keys(sess).length) out[k] = sess;
+    }
+    return out;
+  }
   function normalizeOffDays(raw) {
     const out = {};
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
@@ -193,7 +220,9 @@
   }
   function normalize(d) {
     d = d && typeof d === "object" ? d : {};
-    return { version: 1, teams: Array.isArray(d.teams) ? d.teams : [], daily: d.daily || {}, days: d.days || {}, swaps: d.swaps || {}, offDays: normalizeOffDays(d.offDays), updatedAt: d.updatedAt || null };
+    const known = { version: 1, teams: Array.isArray(d.teams) ? d.teams : [], daily: d.daily || {}, days: d.days || {}, swaps: d.swaps || {}, offDays: normalizeOffDays(d.offDays), numbers: normalizeNumbers(d.numbers), updatedAt: d.updatedAt || null };
+    for (const k of Object.keys(d)) if (!(k in known)) known[k] = d[k];
+    return known;
   }
 
   async function api(method, body, extra) {
@@ -435,6 +464,7 @@
     app.innerHTML = `
       <header><h1>XR Hub <span>Admin</span></h1>
         <div class="status ${statusCls}" id="status">${esc(statusText)}</div>
+        <a class="lock" href="../numbers/">Numbers</a>
         <button class="lock" id="lockBtn" title="Forget passcode on this device">Lock</button></header>
       <nav class="tabs">
         ${[["teams", "Teams"], ["sessions", "Sessions"], ["roster", "Roster"]].map(([k, l]) => `<button data-tab="${k}" class="${ui.tab === k ? "on" : ""}">${l}</button>`).join("")}

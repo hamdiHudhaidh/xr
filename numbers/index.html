@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2a0f6e">
+<meta name="robots" content="noindex">
+<title>XR Hub · Numbers</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&display=swap">
+<style>
+  :root {
+    --deep: #1c0a4d; --purple: #2a0f6e; --violet: #7a2bbf; --pink: #f04a9a; --yellow: #EAF04A;
+    --card: rgba(28, 10, 77, 0.72); --line: rgba(255,255,255,0.14); --muted: rgba(255,255,255,0.62);
+  }
+  * { box-sizing: border-box; }
+  html { margin: 0; background: #2a0f6e; }
+  body { margin: 0; min-height: 100vh; }
+  body {
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Arabic", "Cairo", sans-serif;
+    color: #fff;
+    background: linear-gradient(170deg, #2a0f6e 0%, #4a1690 40%, #7a2bbf 80%, #b23f93 100%);
+  }
+  button, input, select { font: inherit; color: inherit; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 14px 14px 90px; }
+  header { display: flex; align-items: center; gap: 10px; padding: 6px 2px 12px; flex-wrap: wrap; }
+  header h1 { font-size: 20px; margin: 0; font-weight: 800; letter-spacing: .01em; }
+  header h1 span { color: var(--yellow); }
+  .status { margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.1); color: var(--muted); white-space: nowrap; }
+  .status.ok { color: var(--yellow); }
+  .status.err { background: var(--pink); color: #fff; }
+  .lock { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--muted); cursor: pointer; text-decoration: none; display: inline-block; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 14px; margin-bottom: 12px; box-shadow: 0 6px 24px rgba(10,0,40,.25); }
+  .hint { color: var(--muted); font-size: 13px; margin: 2px 2px 12px; }
+  input[type=text], input[type=password], input[type=date], input[type=number] {
+    background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; outline: none; width: 100%;
+  }
+  input:focus { border-color: var(--yellow); }
+  .btn { border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 800; cursor: pointer; background: var(--yellow); color: var(--purple); white-space: nowrap; }
+  .btn.ghost { background: rgba(255,255,255,.1); color: #fff; font-weight: 600; }
+  .btn.small { padding: 6px 12px; font-size: 13px; }
+  .btn.danger { background: none; color: #ffb3d6; border: 1px solid rgba(240,74,154,.5); font-weight: 600; }
+  .days { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: thin; }
+  .days button { flex: none; border: 1px solid var(--line); background: rgba(255,255,255,.06); border-radius: 14px; padding: 6px 10px; cursor: pointer; text-align: center; min-width: 52px; }
+  .days button b { display: block; font-size: 16px; }
+  .days button small { color: var(--muted); font-size: 11px; }
+  .days button.on { background: var(--yellow); color: var(--purple); border-color: var(--yellow); }
+  .days button.on small { color: var(--purple); }
+  .days button.has::after { content: ""; display: block; width: 5px; height: 5px; border-radius: 50%; background: var(--pink); margin: 3px auto 0; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0 12px; }
+  .bar .grow { flex: 1 1 200px; color: var(--muted); font-size: 13px; }
+  .bar input[type=date] { width: auto; flex: none; }
+  .sess-card { position: relative; }
+  .sess-card.counted { border-color: rgba(234,240,74,.45); }
+  .sess-top { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+  .num { width: 36px; height: 36px; border-radius: 50%; background: var(--yellow); color: var(--purple); font-weight: 900; display: grid; place-items: center; flex: none; }
+  .sess-card.counted .num { background: #c4a0ff; color: var(--purple); }
+  .time { font-weight: 800; font-size: 16px; }
+  .time small { color: var(--muted); font-weight: 500; margin-left: 6px; }
+  .who { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .who b { color: #fff; font-weight: 700; }
+  .badge { margin-left: auto; flex: none; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; background: rgba(196,160,255,.22); color: #e4d0ff; }
+  .badge.wait { background: rgba(255,255,255,.1); color: var(--muted); }
+  .counters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .counter {
+    background: rgba(255,255,255,.07);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 10px 10px 12px;
+    text-align: center;
+  }
+  .counter .clabel { font-weight: 800; font-size: 13px; }
+  .counter .clabel .ar { font-family: Cairo, "Noto Sans Arabic", sans-serif; direction: rtl; color: #c4a0ff; }
+  .counter .clabel .en { display: block; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-top: 2px; }
+  .step { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; }
+  .step button {
+    width: 56px; height: 56px; border: 0; border-radius: 50%;
+    background: var(--yellow); color: var(--purple); font-size: 32px; font-weight: 800;
+    line-height: 1; cursor: pointer; touch-action: manipulation; user-select: none;
+    display: grid; place-items: center; padding: 0;
+  }
+  .step button:active { transform: scale(0.96); }
+  .step input {
+    width: 84px; text-align: center; font-size: 28px; font-weight: 800;
+    padding: 8px 4px; border-radius: 16px; font-variant-numeric: tabular-nums;
+    color: #c4a0ff;
+  }
+  .clear { margin-top: 10px; }
+  .gate { max-width: 380px; margin: 14vh auto 0; text-align: center; }
+  .gate h2 { margin: 0 0 6px; }
+  .gate input { text-align: center; font-size: 22px; letter-spacing: .3em; margin: 14px 0 10px; }
+  .err-text { color: #ffb3d6; min-height: 20px; font-size: 13px; }
+  .banner { background: var(--pink); color: #fff; padding: 10px 14px; border-radius: 16px; margin-bottom: 12px; font-weight: 600; }
+  @media (max-width: 620px) {
+    .wrap { padding: 10px 10px 80px; }
+    .card { padding: 12px; border-radius: 18px; }
+    .counters { grid-template-columns: 1fr; }
+    .step button { width: 64px; height: 64px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script src="../config.js"></script>
+<script>
+(function () {
+  "use strict";
+  const API = window.XR_API;
+  const SESS = window.XR_SESSIONS;
+  const PASS_KEY = "xrAdminPasscode";
+  const app = document.getElementById("app");
+
+  const DATES = [];
+  for (let d = new Date(Date.UTC(2026, 10, 12)); d <= new Date(Date.UTC(2026, 10, 30)); d.setUTCDate(d.getUTCDate() + 1)) {
+    DATES.push(d.toISOString().slice(0, 10));
+  }
+  const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dow = ymd => DOW[new Date(ymd + "T12:00:00Z").getUTCDay()];
+  const fmt12 = t => { let [h, m] = t.split(":").map(Number); const ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12; return h + ":" + String(m).padStart(2, "0") + " " + ap; };
+  const sessTime = i => fmt12(SESS[i][0]).replace(" PM", "") + "–" + fmt12(SESS[i][1]);
+  function todayRiyadh() {
+    const q = new URLSearchParams(location.search).get("date");
+    if (q && /^\d{4}-\d{2}-\d{2}$/.test(q)) return q;
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  }
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  function clampCount(n) {
+    n = Math.round(Number(n));
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.min(9999, n);
+  }
+  function normalizeOffDays(raw) {
+    const out = {};
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+    for (const k of Object.keys(raw)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+      const names = Array.isArray(raw[k]) ? raw[k] : [];
+      const seen = new Set();
+      const list = [];
+      for (const n of names) {
+        const name = String(n || "").trim();
+        if (!name || name.length > 80 || seen.has(name)) continue;
+        seen.add(name);
+        list.push(name);
+      }
+      if (list.length) out[k] = list;
+    }
+    return out;
+  }
+  function normalizeNumbers(raw) {
+    const out = {};
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+    for (const k of Object.keys(raw)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+      const day = raw[k];
+      if (!day || typeof day !== "object" || Array.isArray(day)) continue;
+      const sess = {};
+      for (const s of Object.keys(day)) {
+        if (!/^[1-8]$/.test(s)) continue;
+        const v = day[s];
+        if (!v || typeof v !== "object" || Array.isArray(v)) continue;
+        const rec = {};
+        if (Number.isFinite(Number(v.participants))) rec.participants = clampCount(v.participants);
+        if (Number.isFinite(Number(v.engagement))) rec.engagement = clampCount(v.engagement);
+        if ("participants" in rec || "engagement" in rec) sess[s] = rec;
+      }
+      if (Object.keys(sess).length) out[k] = sess;
+    }
+    return out;
+  }
+  function normalize(d) {
+    d = d && typeof d === "object" ? d : {};
+    const known = { version: 1, teams: Array.isArray(d.teams) ? d.teams : [], daily: d.daily || {}, days: d.days || {}, swaps: d.swaps || {}, offDays: normalizeOffDays(d.offDays), numbers: normalizeNumbers(d.numbers), updatedAt: d.updatedAt || null };
+    for (const k of Object.keys(d)) if (!(k in known)) known[k] = d[k];
+    return known;
+  }
+
+  let data = null;
+  let pass = localStorage.getItem(PASS_KEY) || "";
+  const today = todayRiyadh();
+  const ui = { day: DATES.includes(today) ? today : (today > DATES[DATES.length - 1] ? DATES[DATES.length - 1] : DATES[0]) };
+  let saveTimer = null, dirty = false, statusText = "", statusCls = "";
+
+  async function api(method, body, extra) {
+    const res = await fetch(API + "/data" + (extra || ""), {
+      method, cache: "no-store",
+      headers: Object.assign({ "Content-Type": "application/json" }, method === "GET" ? {} : { "X-Passcode": pass }),
+      body: body == null ? undefined : JSON.stringify(body)
+    });
+    if (res.status === 401) { const e = new Error("passcode"); e.code = 401; throw e; }
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  }
+
+  function setStatus(t, cls) { statusText = t; statusCls = cls || ""; const el = document.getElementById("status"); if (el) { el.textContent = t; el.className = "status " + statusCls; } }
+
+  function save() {
+    dirty = true; setStatus("Saving…");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try {
+        const ours = data.numbers;
+        let fresh;
+        try { fresh = normalize(await api("GET")); }
+        catch (e) { fresh = data; }
+        fresh.numbers = ours;
+        fresh.updatedAt = new Date().toISOString();
+        await api("PUT", fresh);
+        data = fresh;
+        dirty = false; setStatus("Saved ✓", "ok");
+      } catch (e) {
+        if (e.code === 401) { localStorage.removeItem(PASS_KEY); pass = ""; renderGate("Passcode no longer valid. Enter it again."); return; }
+        setStatus("Not saved · retrying", "err");
+        saveTimer = setTimeout(save, 4000);
+      }
+    }, 500);
+  }
+
+  function recOf(s) { return ((data.numbers || {})[ui.day] || {})[String(s)] || null; }
+  function hasRec(s) {
+    const r = recOf(s);
+    return !!(r && (("participants" in r) || ("engagement" in r)));
+  }
+  function valOf(s, field) {
+    const r = recOf(s);
+    const n = r ? Number(r[field]) : NaN;
+    return Number.isFinite(n) ? n : null;
+  }
+  function setVal(s, field, value) {
+    const key = String(s);
+    if (!data.numbers) data.numbers = {};
+    if (!data.numbers[ui.day]) data.numbers[ui.day] = {};
+    const rec = Object.assign({}, data.numbers[ui.day][key] || {});
+    rec[field] = clampCount(value);
+    data.numbers[ui.day][key] = rec;
+    save();
+  }
+  function clearSess(s) {
+    const key = String(s);
+    if (!data.numbers || !data.numbers[ui.day]) return;
+    delete data.numbers[ui.day][key];
+    if (!Object.keys(data.numbers[ui.day]).length) delete data.numbers[ui.day];
+    save();
+  }
+
+  function renderGate(msg) {
+    app.innerHTML = `<div class="gate card">
+      <h2>XR Hub <span style="color:var(--yellow)">Numbers</span></h2>
+      <div class="hint">Enter the admin passcode. It's remembered on this device.</div>
+      <form id="gf"><input id="gp" type="password" autocomplete="current-password" placeholder="••••••" autofocus>
+      <div class="err-text" id="ge">${esc(msg || "")}</div>
+      <button class="btn" style="width:100%">Unlock</button></form></div>`;
+    document.getElementById("gf").onsubmit = async ev => {
+      ev.preventDefault();
+      const v = document.getElementById("gp").value.trim();
+      if (!v) return;
+      pass = v;
+      try { await api("POST", null, "?check=1"); localStorage.setItem(PASS_KEY, v); start(); }
+      catch (e) { pass = ""; document.getElementById("ge").textContent = e.code === 401 ? "Wrong passcode." : "Can't reach the server. Check your connection."; }
+    };
+  }
+
+  async function start() {
+    if (!API) { app.innerHTML = `<div class="gate card"><h2>Not connected</h2><div class="hint">The storage server address isn't set in config.js yet.</div></div>`; return; }
+    if (!pass) return renderGate();
+    try {
+      data = normalize(await api("GET"));
+      setStatus(data.updatedAt ? "Synced" : "Ready", "ok");
+    }
+    catch (e) { app.innerHTML = `<div class="banner">Can't load data from the server. Pull to refresh or try again shortly.</div>`; return; }
+    render();
+  }
+
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState !== "visible" || !data || dirty) return;
+    try { data = normalize(await api("GET")); render(); } catch (e) {}
+  });
+
+  function dayHas(d) { return !!Object.keys((data.numbers || {})[d] || {}).length; }
+
+  function render() {
+    const sy = window.scrollY;
+    const day = ui.day;
+    const counted = SESS.filter((_, i) => hasRec(i + 1)).length;
+    app.innerHTML = `
+      <header><h1>XR Hub <span>Numbers</span></h1>
+        <div class="status ${statusCls}" id="status">${esc(statusText)}</div>
+        <a class="lock" href="../admin/">Admin</a>
+        <button class="lock" id="lockBtn" title="Forget passcode on this device">Lock</button></header>
+      <div class="hint">Count participants and engagement for each session. Once a session ends, the numbers appear in purple on the /in schedule.</div>
+      <div class="days" id="dayStrip">
+        ${DATES.map(d => `<button class="${curClass(d)}" data-day="${d}"><small>${dow(d)}${d === today ? " · today" : ""}</small><b>${Number(d.slice(8))}</b></button>`).join("")}
+      </div>
+      <div class="bar">
+        <div class="grow"><b style="color:#fff">${dow(day)} ${Number(day.slice(8))} Nov</b> · ${counted} of ${SESS.length} sessions counted</div>
+        <input type="date" id="dayDate" min="${DATES[0]}" max="${DATES[DATES.length - 1]}" value="${day}">
+      </div>
+      ${SESS.map((pair, i) => sessCard(i, pair)).join("")}`;
+    window.scrollTo(0, sy);
+    bind();
+  }
+  function curClass(d) { return (ui.day === d ? "on" : "") + (dayHas(d) ? " has" : ""); }
+
+  function sessCard(i, pair) {
+    const s = i + 1;
+    const r = window.XR_resolve ? window.XR_resolve(data, ui.day, s) : { people: [], team: null };
+    const names = (r.people || []).map(p => p && p.name).filter(Boolean);
+    const teamName = r.team && r.team.name ? r.team.name : "";
+    const who = names.length ? names.join(" · ") : (teamName || "No team assigned");
+    const counted = hasRec(s);
+    const p = valOf(s, "participants");
+    const e = valOf(s, "engagement");
+    return `<div class="card sess-card ${counted ? "counted" : ""}" data-s="${s}">
+      <div class="sess-top">
+        <div class="num">${s}</div>
+        <div class="grow">
+          <div class="time">${sessTime(i)} <small>${pair[0]}–${pair[1]}</small></div>
+          <div class="who">${teamName ? `<b>${esc(teamName)}</b> · ` : ""}${esc(who)}</div>
+        </div>
+        <div class="badge ${counted ? "" : "wait"}">${counted ? "Counted" : "Not yet"}</div>
+      </div>
+      <div class="counters">
+        ${counterHtml(s, "participants", "المشاركون", "Participants", p)}
+        ${counterHtml(s, "engagement", "التفاعل", "Engagement", e)}
+      </div>
+      ${counted ? `<div class="clear"><button class="btn danger small" data-act="clear" data-s="${s}">Clear this session</button></div>` : ""}
+    </div>`;
+  }
+  function counterHtml(s, field, ar, en, value) {
+    const shown = value == null ? "" : String(value);
+    return `<div class="counter" data-s="${s}" data-field="${field}">
+      <div class="clabel"><span class="ar">${ar}</span><span class="en">${en}</span></div>
+      <div class="step">
+        <button type="button" data-act="dec" data-s="${s}" data-field="${field}" aria-label="Decrease ${en}">−</button>
+        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="${shown}" placeholder="0" aria-label="${en}">
+        <button type="button" data-act="inc" data-s="${s}" data-field="${field}" aria-label="Increase ${en}">+</button>
+      </div>
+    </div>`;
+  }
+
+  function bump(s, field, delta) {
+    const cur = valOf(s, field);
+    const next = clampCount((cur == null ? 0 : cur) + delta);
+    setVal(s, field, next);
+    const input = app.querySelector(`.counter[data-s="${s}"][data-field="${field}"] input`);
+    if (input) input.value = String(next);
+    const card = app.querySelector(`.sess-card[data-s="${s}"]`);
+    if (card && !hasRec(s) === false) {
+      // hasRec is true after setVal; refresh badge without a full rerender if already counted
+    }
+    // Light DOM refresh for badge / clear / day dot when first value is set or last is already shown
+    const badge = card && card.querySelector(".badge");
+    if (card && hasRec(s)) {
+      card.classList.add("counted");
+      if (badge) { badge.classList.remove("wait"); badge.textContent = "Counted"; }
+      if (!card.querySelector("[data-act=clear]")) {
+        const wrap = document.createElement("div");
+        wrap.className = "clear";
+        wrap.innerHTML = `<button class="btn danger small" data-act="clear" data-s="${s}">Clear this session</button>`;
+        wrap.querySelector("button").onclick = () => { clearSess(s); render(); };
+        card.appendChild(wrap);
+      }
+    }
+    const dayBtn = app.querySelector(`#dayStrip button[data-day="${ui.day}"]`);
+    if (dayBtn && dayHas(ui.day)) dayBtn.classList.add("has");
+    const grow = app.querySelector(".bar .grow");
+    if (grow) {
+      const counted = SESS.filter((_, i) => hasRec(i + 1)).length;
+      grow.innerHTML = `<b style="color:#fff">${dow(ui.day)} ${Number(ui.day.slice(8))} Nov</b> · ${counted} of ${SESS.length} sessions counted`;
+    }
+  }
+
+  function bindStep(btn, fn) {
+    let hold = null, rep = null;
+    const start = ev => {
+      ev.preventDefault();
+      fn();
+      hold = setTimeout(() => { rep = setInterval(fn, 90); }, 380);
+    };
+    const stop = () => { clearTimeout(hold); clearInterval(rep); hold = rep = null; };
+    btn.addEventListener("pointerdown", start);
+    ["pointerup", "pointercancel", "pointerleave"].forEach(ev => btn.addEventListener(ev, stop));
+  }
+
+  function bind() {
+    document.getElementById("lockBtn").onclick = () => { localStorage.removeItem(PASS_KEY); pass = ""; renderGate(); };
+    app.querySelectorAll("#dayStrip button").forEach(b => b.onclick = () => { ui.day = b.dataset.day; render(); });
+    const di = document.getElementById("dayDate");
+    if (di) di.onchange = () => { if (DATES.includes(di.value)) { ui.day = di.value; render(); } };
+    app.querySelectorAll("[data-act=inc]").forEach(b => bindStep(b, () => bump(Number(b.dataset.s), b.dataset.field, 1)));
+    app.querySelectorAll("[data-act=dec]").forEach(b => bindStep(b, () => bump(Number(b.dataset.s), b.dataset.field, -1)));
+    app.querySelectorAll(".counter input").forEach(inp => {
+      const field = inp.closest(".counter").dataset.field;
+      const s = Number(inp.closest(".counter").dataset.s);
+      const apply = () => {
+        const raw = inp.value.trim();
+        if (raw === "") { /* leave stored value until they type a number */ return; }
+        if (!/^\d+$/.test(raw)) { const cur = valOf(s, field); inp.value = cur == null ? "" : String(cur); return; }
+        setVal(s, field, raw);
+        inp.value = String(valOf(s, field));
+        bump(s, field, 0); // refresh badge / counts without changing the value
+      };
+      inp.addEventListener("change", apply);
+      inp.addEventListener("blur", apply);
+    });
+    app.querySelectorAll("[data-act=clear]").forEach(b => b.onclick = () => { clearSess(Number(b.dataset.s)); render(); });
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>

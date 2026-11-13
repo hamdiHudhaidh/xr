@@ -243,6 +243,67 @@
       0%, 100% { box-shadow: 0 0 1vmin #EAF04A, 0 0 2.5vmin rgba(234,240,74,0.45), inset 0 0 1vmin rgba(234,240,74,0.25); }
       50% { box-shadow: 0 0 1.8vmin #EAF04A, 0 0 5vmin rgba(234,240,74,0.7), inset 0 0 2vmin rgba(234,240,74,0.45); }
     }
+
+    .done-nums {
+      position: absolute;
+      left: 26.25%; /* default: centred on the 304px avatar zone of a 640px pill */
+      width: 47.5%;
+      right: auto;
+      bottom: 4%;
+      height: 30%;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      gap: 2.2%;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .done-nums .stat {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45em;
+      background: rgba(244, 239, 230, 0.96);
+      border-radius: 999px;
+      padding: 0 2.5%;
+      box-shadow: 0 0.15vmin 0.55vmin rgba(20, 0, 50, 0.4);
+    }
+    .done-nums .stat .n {
+      flex: none;
+      font-family: Cairo, "Segoe UI", system-ui, sans-serif;
+      font-weight: 800;
+      font-size: 2.15vmin;
+      line-height: 1;
+      color: #7a2bbf;
+      letter-spacing: -0.02em;
+    }
+    .done-nums .stat .lbl {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+      line-height: 1.1;
+    }
+    .done-nums .stat .lbl .ar {
+      font-family: Cairo, "Noto Sans Arabic", "Segoe UI", system-ui, sans-serif;
+      font-weight: 800;
+      font-size: 1.05vmin;
+      color: #7a2bbf;
+      direction: rtl;
+      unicode-bidi: isolate;
+    }
+    .done-nums .stat .lbl .en {
+      font-family: Cairo, system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-weight: 700;
+      font-size: 0.7vmin;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #7a2bbf;
+      opacity: 0.88;
+    }
     #off-layer { overflow: visible; }
     #off-panel {
       position: absolute;
@@ -512,6 +573,37 @@
         el.style.left = pct(left + x, IMG_W); el.style.top = pct(top + y, IMG_H);
         el.style.width = pct(w, IMG_W); el.style.height = pct(h, IMG_H);
       }
+      function sessionNums(ymd, s) {
+        const rec = (((teamData || {}).numbers || {})[ymd] || {})[String(s)];
+        if (!rec || typeof rec !== "object") return null;
+        const p = Number(rec.participants), e = Number(rec.engagement);
+        const hasP = Number.isFinite(p), hasE = Number.isFinite(e);
+        if (!hasP && !hasE) return null;
+        return {
+          participants: hasP ? Math.max(0, Math.round(p)) : 0,
+          engagement: hasE ? Math.max(0, Math.round(e)) : 0
+        };
+      }
+      function statEl(value, ar, en) {
+        const el = document.createElement("div");
+        el.className = "stat";
+        const n = document.createElement("div");
+        n.className = "n";
+        n.textContent = String(value);
+        const lbl = document.createElement("div");
+        lbl.className = "lbl";
+        const arEl = document.createElement("div");
+        arEl.className = "ar";
+        arEl.textContent = ar;
+        const enEl = document.createElement("div");
+        enEl.className = "en";
+        enEl.textContent = en;
+        lbl.appendChild(arEl);
+        lbl.appendChild(enEl);
+        el.appendChild(n);
+        el.appendChild(lbl);
+        return el;
+      }
       function renderDone(now) {
         doneLayer.innerHTML = "";
         if (!inEvent(now.ymd)) return;
@@ -520,6 +612,17 @@
           const el = document.createElement("div");
           el.className = "done";
           place(el, i, 0, 0, PILL_W, PILL_H);
+          const nums = sessionNums(now.ymd, i + 1);
+          if (nums) {
+            const bar = document.createElement("div");
+            bar.className = "done-nums";
+            const left = ARROW_X[i] - ZONE_W / 2;
+            bar.style.left = (left / PILL_W * 100) + "%";
+            bar.style.width = (ZONE_W / PILL_W * 100) + "%";
+            bar.appendChild(statEl(nums.participants, "المشاركون", "Participants"));
+            bar.appendChild(statEl(nums.engagement, "التفاعل", "Engagement"));
+            el.appendChild(bar);
+          }
           doneLayer.appendChild(el);
         });
       }
@@ -611,13 +714,17 @@
         teamLayer.innerHTML = "";
         if (!teamData || !window.XR_resolve || !inEvent(now.ymd)) return;
         const unit = box.clientHeight / IMG_H; // screen px per poster px
+        const NUMS_H = 38;
         SESSIONS.forEach(([, b], i) => {
           const r = window.XR_resolve(teamData, now.ymd, i + 1);
           const people = (r.people || []).filter(x => x && x.name);
           if (!people.length) return;
+          const past = now.mins >= toMin(b);
+          const hasNums = past && !!sessionNums(now.ymd, i + 1);
+          const zoneH = hasNums ? ZONE_H - NUMS_H : ZONE_H;
           const el = document.createElement("div");
-          el.className = "team avatars" + (now.mins >= toMin(b) ? " past" : "");
-          place(el, i, ARROW_X[i] - ZONE_W / 2, ZONE_TOP, ZONE_W, ZONE_H);
+          el.className = "team avatars" + (past ? " past" : "");
+          place(el, i, ARROW_X[i] - ZONE_W / 2, ZONE_TOP, ZONE_W, zoneH);
           const n = people.length;
           const padX = 6, padY = 4;
           const gap = n <= 3 ? 8 : n <= 4 ? 5 : n <= 6 ? 4 : 3;
@@ -626,7 +733,7 @@
           // Names stay readable on iPad-scale posters; the photo box is taller than it is wide so a full-body cut-out fits.
           const namePx = Math.max(9.5, 11.5 * unit);
           const nameGap = Math.max(1.5, 2 * unit);
-          const availH = (ZONE_H - padY * 2) * unit;
+          const availH = (zoneH - padY * 2) * unit;
           const avW = Math.max(16, colW * unit);
           const avH = Math.max(avW * 1.05, availH - namePx * 1.15 - nameGap);
           el.style.gap = (gap * unit) + "px";

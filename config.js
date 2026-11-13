@@ -16,7 +16,8 @@
   /* Resolve the team and people for one date + session from the stored data.
      data = { teams:[{id,name,people:[]}], daily:{ "1":teamId,... },
               days:{ "YYYY-MM-DD": { "1": teamId | "" } }, swaps:{ "YYYY-MM-DD|1": [{from,to}] },
-              offDays:{ "YYYY-MM-DD": ["Name", ...] } } */
+              offDays:{ "YYYY-MM-DD": ["Name", ...] },
+              numbers:{ "YYYY-MM-DD": { "1": {participants, engagement} } } } */
   window.XR_resolve = function (data, ymd, s) {
     data = data || {};
     var key = String(s);
