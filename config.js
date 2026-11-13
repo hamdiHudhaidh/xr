@@ -2,7 +2,7 @@
    XR_API is the Cloudflare Worker that stores teams and assignments.
    Set it to the deployed workers.dev URL, e.g. https://xr-admin-api.<subdomain>.workers.dev */
 (function () {
-  var API = "";
+  var API = "https://xr-admin-api.hamdisameer.workers.dev";
   var q = new URLSearchParams(location.search).get("api");
   var local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   if (q && local) API = q; // test override, only when served locally
