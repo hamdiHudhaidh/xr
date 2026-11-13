@@ -168,7 +168,7 @@
     app.innerHTML = `<div class="gate card">
       <h2>XR Hub <span style="color:var(--yellow)">Admin</span></h2>
       <div class="hint">Enter the admin passcode. It's remembered on this device.</div>
-      <form id="gf"><input id="gp" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••••" autofocus>
+      <form id="gf"><input id="gp" type="password" autocomplete="current-password" placeholder="••••••" autofocus>
       <div class="err-text" id="ge">${esc(msg || "")}</div>
       <button class="btn" style="width:100%">Unlock</button></form></div>`;
     document.getElementById("gf").onsubmit = async ev => {
