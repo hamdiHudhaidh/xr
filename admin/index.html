@@ -465,6 +465,7 @@
       <header><h1>XR Hub <span>Admin</span></h1>
         <div class="status ${statusCls}" id="status">${esc(statusText)}</div>
         <a class="lock" href="../numbers/">Numbers</a>
+        <a class="lock" href="../kpi/">KPI</a>
         <button class="lock" id="lockBtn" title="Forget passcode on this device">Lock</button></header>
       <nav class="tabs">
         ${[["teams", "Teams"], ["sessions", "Sessions"], ["roster", "Roster"]].map(([k, l]) => `<button data-tab="${k}" class="${ui.tab === k ? "on" : ""}">${l}</button>`).join("")}

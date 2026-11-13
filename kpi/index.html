@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#2a0f6e">
+<title>XR Hub · KPI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&display=swap">
+<style>
+  :root {
+    --deep: #1c0a4d;
+    --purple: #2a0f6e;
+    --violet: #7a2bbf;
+    --pink: #f04a9a;
+    --yellow: #EAF04A;
+    --lilac: #c4a0ff;
+    --cream: #F4EFE6;
+    --card: rgba(28, 10, 77, 0.78);
+    --line: rgba(234, 240, 74, 0.38);
+    --muted: rgba(255,255,255,0.68);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--purple);
+    cursor: none;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    overscroll-behavior: none;
+  }
+  body {
+    font-family: Cairo, "Noto Sans Arabic", "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: #fff;
+  }
+  .bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(135deg, #2a0f6e 0%, #7a2bbf 55%, #f04a9a 100%);
+    pointer-events: none;
+  }
+  .bg .blur {
+    position: absolute;
+    inset: -8%;
+    width: 116%;
+    height: 116%;
+    object-fit: cover;
+    filter: blur(36px) saturate(1.08);
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+  .page {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 2.2vh 2.4vw 1.4vh;
+    gap: 1.4vh;
+  }
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2vw;
+    flex: none;
+  }
+  .brand {
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    font-size: 1.5vmin;
+    color: var(--yellow);
+    text-transform: uppercase;
+    margin-bottom: 0.2vh;
+  }
+  header h1 {
+    display: flex;
+    align-items: baseline;
+    gap: 0.7em;
+    line-height: 1;
+  }
+  header h1 .ar {
+    font-size: 4.4vmin;
+    font-weight: 800;
+    color: #fff;
+    direction: rtl;
+  }
+  header h1 .en {
+    font-size: 3.2vmin;
+    font-weight: 800;
+    color: var(--yellow);
+    letter-spacing: 0.06em;
+  }
+  .totals {
+    display: grid;
+    grid-template-columns: 1.15fr 1.15fr 0.7fr;
+    gap: 1.2vw;
+    flex: none;
+  }
+  .stat {
+    background: var(--card);
+    border: 0.14vmin solid var(--line);
+    border-radius: 1.8vmin;
+    padding: 1.1vh 1.5vw 1.2vh;
+    box-shadow: 0 0.4vmin 1.6vmin rgba(10, 0, 40, 0.35);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+  }
+  .stat .n {
+    font-weight: 800;
+    font-size: 5.2vmin;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat.p .n { color: var(--lilac); }
+  .stat.e .n { color: var(--yellow); }
+  .stat.d .n { color: #fff; font-size: 4.4vmin; }
+  .stat .lbl {
+    margin-top: 0.45vh;
+    display: flex;
+    align-items: baseline;
+    gap: 0.55em;
+    min-width: 0;
+  }
+  .stat .lbl .ar {
+    font-weight: 800;
+    font-size: 1.7vmin;
+    direction: rtl;
+  }
+  .stat.p .lbl .ar, .stat.p .lbl .en { color: var(--lilac); }
+  .stat.e .lbl .ar, .stat.e .lbl .en { color: var(--yellow); }
+  .stat.d .lbl .ar, .stat.d .lbl .en { color: var(--muted); }
+  .stat .lbl .en {
+    font-weight: 700;
+    font-size: 1.15vmin;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.9;
+  }
+  .chart-card {
+    flex: 1 1 auto;
+    min-height: 0;
+    background: var(--card);
+    border: 0.14vmin solid var(--line);
+    border-radius: 2vmin;
+    box-shadow: 0 0.4vmin 1.6vmin rgba(10, 0, 40, 0.35);
+    padding: 1.4vh 1.4vw 1.2vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .chart-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5vw;
+    flex: none;
+    margin-bottom: 0.8vh;
+  }
+  .chart-title .ar {
+    font-weight: 800;
+    font-size: 2.1vmin;
+    direction: rtl;
+    color: #fff;
+  }
+  .chart-title .en {
+    font-weight: 700;
+    font-size: 1.15vmin;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 0.7em 1.3em;
+    flex-wrap: wrap;
+    font-weight: 700;
+    font-size: 1.35vmin;
+    color: var(--cream);
+  }
+  .legend .item { display: flex; align-items: center; gap: 0.45em; white-space: nowrap; }
+  .swatch {
+    width: 1.35em;
+    height: 1.35em;
+    border-radius: 0.35em;
+    flex: none;
+    box-shadow: 0 0 0.4vmin rgba(0,0,0,0.25);
+  }
+  .swatch.p { background: var(--lilac); }
+  .swatch.e { background: var(--yellow); }
+  #chart {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+  }
+  #chart svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .empty {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2vh 2vw;
+  }
+  .empty .ar {
+    font-weight: 800;
+    font-size: 3.2vmin;
+    direction: rtl;
+    color: var(--yellow);
+  }
+  .empty .en {
+    font-weight: 800;
+    font-size: 2.2vmin;
+    color: #fff;
+    margin-top: 0.3vh;
+  }
+  .empty p {
+    margin-top: 1.2vh;
+    color: var(--muted);
+    font-size: 1.5vmin;
+    font-weight: 600;
+    max-width: 36em;
+  }
+  .team-wrap {
+    flex: none;
+    height: 29vh;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .team-title {
+    text-align: center;
+    flex: none;
+    margin-bottom: 0.4vh;
+  }
+  .team-title .ar {
+    font-weight: 800;
+    font-size: 2.2vmin;
+    direction: rtl;
+    color: var(--yellow);
+  }
+  .team-title .en {
+    font-weight: 700;
+    font-size: 1.15vmin;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .team-stage {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .team-stage::before {
+    content: "";
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    bottom: 0;
+    height: 2.2vmin;
+    background: radial-gradient(ellipse at center, rgba(234,240,74,0.32), rgba(42,15,110,0) 70%);
+    pointer-events: none;
+  }
+  #team {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: flex-end;
+    align-items: flex-end;
+    overflow: visible;
+  }
+  .member {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    overflow: visible;
+  }
+  .av-name {
+    width: 100%;
+    text-align: center;
+    color: var(--yellow);
+    font-family: Cairo, "Noto Sans Arabic", "Segoe UI", system-ui, sans-serif;
+    font-weight: 700;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    unicode-bidi: plaintext;
+    flex: none;
+  }
+  .av {
+    flex: none;
+    box-sizing: border-box;
+    animation: rock 2.6s ease-in-out infinite;
+    transform-origin: 50% 100%;
+    will-change: transform;
+  }
+  .av.photo {
+    object-fit: contain;
+    object-position: center bottom;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .av.fallback {
+    border-radius: 50%;
+    border: 0.2vmin solid rgba(255,255,255,0.85);
+    background: #5a3a9a;
+    color: #fff;
+    font-weight: 800;
+    display: grid;
+    place-items: center;
+    line-height: 1;
+  }
+  @keyframes rock {
+    0%, 100% { transform: rotate(-6deg); }
+    50% { transform: rotate(6deg); }
+  }
+  @media (max-aspect-ratio: 3/4) {
+    .totals { grid-template-columns: 1fr 1fr; }
+    .stat.d { grid-column: 1 / -1; }
+    .stat .n { font-size: 6.2vmin; }
+    header h1 .ar { font-size: 5vmin; }
+    .team-wrap { height: 26vh; }
+    .chart-head { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+  <div class="bg">
+    <img class="blur" src="../poster.png" alt="" aria-hidden="true">
+  </div>
+  <div class="page">
+    <header>
+      <div>
+        <div class="brand">XR Hub</div>
+        <h1><span class="ar">المؤشرات</span><span class="en">KPI</span></h1>
+      </div>
+    </header>
+    <section class="totals" id="totals"></section>
+    <section class="chart-card">
+      <div class="chart-head">
+        <div class="chart-title">
+          <div class="ar">حسب اليوم</div>
+          <div class="en">By day</div>
+        </div>
+        <div class="legend">
+          <span class="item"><span class="swatch p"></span><span>المشاركون · Participants</span></span>
+          <span class="item"><span class="swatch e"></span><span>التفاعل · Engagement</span></span>
+        </div>
+      </div>
+      <div id="chart"></div>
+    </section>
+    <section class="team-wrap">
+      <div class="team-title">
+        <div class="ar">الفريق</div>
+        <div class="en">The team</div>
+      </div>
+      <div class="team-stage">
+        <div id="team"></div>
+      </div>
+    </section>
+  </div>
+  <script src="../config.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    const API = window.XR_API;
+    const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const AVATAR_PALETTE = [
+      { bg: "#EAF04A", fg: "#2a0f6e" },
+      { bg: "#f04a9a", fg: "#fff" },
+      { bg: "#5fe0c8", fg: "#0b3b34" },
+      { bg: "#ff9f43", fg: "#3a1d00" },
+      { bg: "#8ab4ff", fg: "#0b1c40" },
+      { bg: "#c58cff", fg: "#1a0833" },
+      { bg: "#7bd389", fg: "#0c2e14" },
+      { bg: "#ff6b6b", fg: "#3a0a0a" }
+    ];
+
+    let data = null;
+    let avatars = {};
+    let lastSig = "";
+    let resizeT = null;
+
+    function clampCount(n) {
+      n = Math.round(Number(n));
+      if (!Number.isFinite(n) || n < 0) return 0;
+      return Math.min(9999, n);
+    }
+    function normalizeNumbers(raw) {
+      const out = {};
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+      for (const k of Object.keys(raw)) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+        const day = raw[k];
+        if (!day || typeof day !== "object" || Array.isArray(day)) continue;
+        const sess = {};
+        for (const s of Object.keys(day)) {
+          if (!/^[1-8]$/.test(s)) continue;
+          const v = day[s];
+          if (!v || typeof v !== "object" || Array.isArray(v)) continue;
+          const rec = {};
+          if (Number.isFinite(Number(v.participants))) rec.participants = clampCount(v.participants);
+          if (Number.isFinite(Number(v.engagement))) rec.engagement = clampCount(v.engagement);
+          if ("participants" in rec || "engagement" in rec) sess[s] = rec;
+        }
+        if (Object.keys(sess).length) out[k] = sess;
+      }
+      return out;
+    }
+    function fmt(n) {
+      return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+    function initials(name) {
+      const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return "?";
+      if (parts.length === 1) return Array.from(parts[0])[0].toUpperCase();
+      const a = Array.from(parts[0])[0], b = Array.from(parts[parts.length - 1])[0];
+      return (a + b).toUpperCase();
+    }
+    function colorFor(name) {
+      let h = 0;
+      const s = String(name);
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+      return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
+    }
+    function dayParts(ymd) {
+      const dt = new Date(ymd + "T12:00:00Z");
+      const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dt.getUTCMonth()];
+      return { dow: DOW[dt.getUTCDay()], day: String(dt.getUTCDate()), mon: mon };
+    }
+    function dailyTotals() {
+      const nums = normalizeNumbers((data || {}).numbers);
+      return Object.keys(nums).sort().map(ymd => {
+        let participants = 0, engagement = 0;
+        Object.keys(nums[ymd]).forEach(s => {
+          const rec = nums[ymd][s];
+          participants += rec.participants || 0;
+          engagement += rec.engagement || 0;
+        });
+        return { ymd, participants, engagement };
+      });
+    }
+    function roster() {
+      const seen = new Set();
+      const names = [];
+      function add(n) {
+        const name = String(n || "").trim();
+        if (!name || seen.has(name)) return;
+        seen.add(name);
+        names.push(name);
+      }
+      ((data || {}).teams || []).forEach(t => (t.people || []).forEach(add));
+      Object.keys(avatars || {}).forEach(add);
+      return names;
+    }
+    function niceMax(v) {
+      if (v <= 0) return 10;
+      const pow = Math.pow(10, Math.floor(Math.log10(v)));
+      const n = v / pow;
+      const nice = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+      return nice * pow;
+    }
+    function ticks(maxY) {
+      const steps = 4;
+      const out = [];
+      for (let i = 1; i <= steps; i++) out.push((maxY / steps) * i);
+      return out;
+    }
+
+    function renderTotals(days) {
+      const el = document.getElementById("totals");
+      const p = days.reduce((s, d) => s + d.participants, 0);
+      const e = days.reduce((s, d) => s + d.engagement, 0);
+      el.innerHTML =
+        '<div class="stat p"><div class="n">' + fmt(p) + '</div><div class="lbl"><span class="ar">المشاركون</span><span class="en">Participants</span></div></div>' +
+        '<div class="stat e"><div class="n">' + fmt(e) + '</div><div class="lbl"><span class="ar">التفاعل</span><span class="en">Engagement</span></div></div>' +
+        '<div class="stat d"><div class="n">' + fmt(days.length) + '</div><div class="lbl"><span class="ar">الأيام</span><span class="en">Days counted</span></div></div>';
+    }
+
+    function renderChart(days) {
+      const el = document.getElementById("chart");
+      if (!days.length) {
+        el.innerHTML = '<div class="empty"><div class="ar">لا توجد أرقام بعد</div><div class="en">No numbers yet</div><p>Count participants and engagement on the Numbers page and they will appear here.</p></div>';
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      const W = Math.max(640, Math.round(rect.width) || 1200);
+      const H = Math.max(240, Math.round(rect.height) || 400);
+      const padL = 54, padR = 18, padT = 28, padB = 48;
+      const plotW = W - padL - padR;
+      const plotH = H - padT - padB;
+      const maxY = niceMax(Math.max.apply(null, days.map(d => Math.max(d.participants, d.engagement))));
+      const yOf = v => padT + plotH * (1 - v / maxY);
+      const n = days.length;
+      const maxGroup = 168;
+      const usedW = Math.min(plotW, n * maxGroup);
+      const origin = padL + (plotW - usedW) / 2;
+      const groupW = usedW / n;
+      const barW = Math.max(8, Math.min(48, groupW * 0.36));
+      const gap = Math.max(4, Math.min(12, barW * 0.24));
+      const labelFs = n > 14 ? 11 : n > 9 ? 13 : 15;
+      const valFs = n > 14 ? 11 : n > 9 ? 12 : 14;
+
+      let grid = "";
+      ticks(maxY).forEach(t => {
+        const y = yOf(t);
+        grid += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y + '" y2="' + y + '" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>';
+        grid += '<text x="' + (padL - 10) + '" y="' + (y + 4) + '" text-anchor="end" fill="rgba(255,255,255,0.62)" font-size="12" font-weight="700" font-family="Cairo, system-ui, sans-serif">' + fmt(t) + '</text>';
+      });
+      grid += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + (padT + plotH) + '" y2="' + (padT + plotH) + '" stroke="rgba(234,240,74,0.35)" stroke-width="1.5"/>';
+
+      let bars = "";
+      days.forEach((d, i) => {
+        const mid = origin + groupW * i + groupW / 2;
+        const xP = mid - gap / 2 - barW;
+        const xE = mid + gap / 2;
+        function bar(x, value, color, dark) {
+          const top = yOf(value);
+          const h = Math.max(2, padT + plotH - top);
+          const rx = Math.min(8, barW / 2);
+          // Rounded top, square bottom
+          const r = Math.min(rx, h / 2);
+          const path = 'M ' + x + ' ' + (top + h) +
+            ' V ' + (top + r) +
+            ' Q ' + x + ' ' + top + ' ' + (x + r) + ' ' + top +
+            ' H ' + (x + barW - r) +
+            ' Q ' + (x + barW) + ' ' + top + ' ' + (x + barW) + ' ' + (top + r) +
+            ' V ' + (top + h) + ' Z';
+          const ly = Math.max(12, top - 6);
+          return '<path d="' + path + '" fill="' + color + '"/>' +
+            '<text x="' + (x + barW / 2) + '" y="' + ly + '" text-anchor="middle" fill="' + dark + '" font-size="' + valFs + '" font-weight="800" font-family="Cairo, system-ui, sans-serif">' + fmt(value) + '</text>';
+        }
+        bars += bar(xP, d.participants, "#c4a0ff", "#c4a0ff");
+        bars += bar(xE, d.engagement, "#EAF04A", "#EAF04A");
+        const p = dayParts(d.ymd);
+        const mon = (p.mon !== "Nov") ? " " + p.mon : "";
+        bars += '<text x="' + mid + '" y="' + (H - 26) + '" text-anchor="middle" fill="#EAF04A" font-size="' + labelFs + '" font-weight="800" font-family="Cairo, system-ui, sans-serif">' + p.day + mon + '</text>';
+        bars += '<text x="' + mid + '" y="' + (H - 10) + '" text-anchor="middle" fill="rgba(255,255,255,0.68)" font-size="' + Math.max(10, labelFs - 2) + '" font-weight="700" font-family="Cairo, system-ui, sans-serif">' + p.dow + '</text>';
+      });
+
+      el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Participants and engagement by day">' + grid + bars + '</svg>';
+    }
+
+    function appendMember(parent, name, j, avW, avH, namePx, nameGap) {
+      const cell = document.createElement("div");
+      cell.className = "member";
+      cell.style.width = avW.toFixed(2) + "px";
+      const src = avatars[name];
+      const av = document.createElement(src ? "img" : "div");
+      av.className = "av " + (src ? "photo" : "fallback");
+      av.style.animationDuration = (2.2 + (j % 4) * 0.22) + "s";
+      av.style.animationDelay = (-j * 0.37) + "s";
+      av.title = name;
+      if (src) {
+        av.style.width = avW.toFixed(2) + "px";
+        av.style.height = avH.toFixed(2) + "px";
+        av.src = src;
+        av.alt = name;
+        av.draggable = false;
+      } else {
+        const s = Math.min(avW, Math.max(22, avH * 0.5));
+        av.style.width = av.style.height = s.toFixed(2) + "px";
+        av.textContent = initials(name);
+        const col = colorFor(name);
+        av.style.background = col.bg;
+        av.style.color = col.fg;
+        av.style.fontSize = (s * 0.42).toFixed(2) + "px";
+      }
+      const nm = document.createElement("div");
+      nm.className = "av-name";
+      nm.textContent = name;
+      nm.title = name;
+      nm.style.marginTop = nameGap.toFixed(2) + "px";
+      nm.style.fontSize = namePx.toFixed(2) + "px";
+      cell.appendChild(av);
+      cell.appendChild(nm);
+      parent.appendChild(cell);
+    }
+
+    function renderTeam() {
+      const root = document.getElementById("team");
+      root.innerHTML = "";
+      const names = roster();
+      const wrap = root.getBoundingClientRect();
+      const n = names.length;
+      if (!n) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.style.height = "auto";
+        empty.innerHTML = '<div class="en">The team will appear here</div>';
+        root.appendChild(empty);
+        return;
+      }
+      const availW = Math.max(200, wrap.width);
+      const availH = Math.max(80, wrap.height);
+      const namePxBase = Math.max(12, Math.min(20, availH * 0.08));
+      const nameGap = Math.max(3, availH * 0.02);
+      let cols = n;
+      let rows = 1;
+      let gap = 14;
+      let avW = (availW - gap * (n - 1)) / n;
+      if (avW < 72 && n > 6) {
+        rows = 2;
+        cols = Math.ceil(n / 2);
+        gap = 12;
+        avW = (availW - gap * (cols - 1)) / cols;
+      }
+      avW = Math.max(48, Math.min(200, avW));
+      const rowH = (availH - gap * (rows - 1)) / rows;
+      const avH = Math.max(avW * 1.15, Math.min(avW * 1.85, rowH - namePxBase * 1.2 - nameGap - 2));
+      root.style.gap = gap + "px";
+      names.forEach((name, j) => appendMember(root, name, j, avW, avH, namePxBase, nameGap));
+      root.querySelectorAll(".av-name").forEach(nm => {
+        let fs = namePxBase;
+        const minFs = Math.max(9, namePxBase * 0.8);
+        while (fs > minFs + 0.05 && nm.scrollWidth > nm.clientWidth + 0.5) {
+          fs = Math.max(minFs, fs - 0.3);
+          nm.style.fontSize = fs.toFixed(2) + "px";
+        }
+      });
+    }
+
+    function paint(force) {
+      const days = dailyTotals();
+      const sig = JSON.stringify({
+        days: days,
+        teams: ((data || {}).teams || []).map(t => t.people || []),
+        av: Object.keys(avatars || {}).map(k => k + ":" + String(avatars[k] || "").length)
+      });
+      if (!force && sig === lastSig) return;
+      lastSig = sig;
+      renderTotals(days);
+      renderChart(days);
+      renderTeam();
+    }
+
+    async function load() {
+      if (!API) return;
+      try {
+        const [dRes, aRes] = await Promise.all([
+          fetch(API + "/data", { cache: "no-store" }),
+          fetch(API + "/avatars", { cache: "no-store" })
+        ]);
+        if (!dRes.ok) throw new Error(dRes.status);
+        data = await dRes.json();
+        avatars = (aRes.ok ? await aRes.json() : {}) || {};
+        if (typeof avatars !== "object" || Array.isArray(avatars) || !avatars) avatars = {};
+      } catch (e) {
+        if (!data) {
+          data = { teams: [], numbers: {} };
+          avatars = {};
+          lastSig = "";
+          const chart = document.getElementById("chart");
+          chart.innerHTML = '<div class="empty"><div class="ar">تعذر التحميل</div><div class="en">Couldn\'t load the numbers</div><p>The page will try again shortly.</p></div>';
+          renderTotals([]);
+          renderTeam();
+          return;
+        }
+      }
+      paint(false);
+    }
+
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeT);
+      resizeT = setTimeout(() => paint(true), 120);
+    });
+    if (document.fonts) {
+      document.fonts.load("800 24px Cairo").catch(() => {});
+      document.fonts.ready.then(() => paint(true));
+    }
+    load();
+    setInterval(load, 45000);
+  })();
+  </script>
+</body>
+</html>
