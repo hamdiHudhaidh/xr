@@ -147,7 +147,7 @@
     .team .nm { font-weight: 800; line-height: 1.05; white-space: nowrap; max-width: 100%; padding: 0 6%; overflow: hidden; text-overflow: ellipsis; }
     .team .nm.members { white-space: normal; text-overflow: clip; padding: 0 9%; line-height: 1.1; font-weight: 700; }
     .team.past { border-color: rgba(255,255,255,0.25); color: #d6d3df; background: #3a3550; }
-    /* Avatar test: row of rocking circular photos in place of names. */
+    /* Avatar test: rocking cut-out photos (transparency preserved) plus a name. */
     .team.avatars {
       flex-direction: row;
       align-items: center;
@@ -168,7 +168,7 @@
       align-items: center;
       justify-content: center;
       min-width: 0;
-      overflow: hidden;
+      overflow: visible;
     }
     .av-name {
       width: 100%;
@@ -186,13 +186,22 @@
     .team.past .av-name { color: #d6d3df; }
     .av {
       flex: none;
-      border-radius: 50%;
-      object-fit: cover;
       box-sizing: border-box;
-      border: 0.2vmin solid rgba(255, 255, 255, 0.95);
-      box-shadow: 0 0.12vmin 0.4vmin rgba(0,0,0,0.4);
       animation: rock 2.6s ease-in-out infinite;
-      transform-origin: 50% 75%;
+      transform-origin: 50% 80%;
+      will-change: transform;
+    }
+    .av.photo {
+      object-fit: contain;
+      object-position: center bottom;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .av.fallback {
+      border-radius: 50%;
+      border: 0.2vmin solid rgba(255,255,255,0.85);
       background: #5a3a9a;
       color: #fff;
       font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans Arabic", sans-serif;
@@ -200,15 +209,13 @@
       display: grid;
       place-items: center;
       line-height: 1;
-      will-change: transform;
     }
-    .av.fallback { border-color: rgba(255,255,255,0.85); }
     .team.past .av {
       filter: grayscale(1) brightness(0.8) contrast(0.92);
       animation: none;
       transform: none;
-      border-color: rgba(255,255,255,0.4);
     }
+    .team.past .av.fallback { border-color: rgba(255,255,255,0.4); }
     @keyframes rock {
       0%, 100% { transform: rotate(-6deg); }
       50% { transform: rotate(6deg); }
@@ -501,7 +508,7 @@
             cell.style.width = (colW * unit).toFixed(2) + "px";
             const src = avatars[p.name];
             const av = document.createElement(src ? "img" : "div");
-            av.className = "av" + (src ? "" : " fallback");
+            av.className = "av " + (src ? "photo" : "fallback");
             const px = sizePx.toFixed(2) + "px";
             av.style.width = px;
             av.style.height = px;

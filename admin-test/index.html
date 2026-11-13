@@ -57,12 +57,29 @@
   .prow { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 8px; border-radius: 16px; background: rgba(255,255,255,.1); }
   .prow .nm { flex: 1; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
   .av-thumb, .av-ph {
-    width: 40px; height: 40px; border-radius: 50%; flex: none;
-    border: 2px solid rgba(255,255,255,.45); box-sizing: border-box;
-    object-fit: cover; display: grid; place-items: center;
+    width: 48px; height: 48px; flex: none;
+    box-sizing: border-box;
+    display: grid; place-items: center;
     font-weight: 800; font-size: 15px; line-height: 1;
   }
-  .av-ph { background: #5a3a9a; color: #fff; }
+  .av-thumb {
+    border-radius: 8px;
+    object-fit: contain;
+    object-position: center;
+    background-color: #1c0a4d;
+    background-image:
+      linear-gradient(45deg, rgba(255,255,255,.16) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(255,255,255,.16) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(255,255,255,.16) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.16) 75%);
+    background-size: 10px 10px;
+    background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+  }
+  .av-ph {
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.45);
+    background: #5a3a9a; color: #fff;
+  }
   #avatarFile { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
   .empty { color: var(--muted); font-style: italic; font-size: 13px; }
   .days { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: thin; }
@@ -205,22 +222,25 @@
       const url = URL.createObjectURL(file);
       const img = new Image();
       img.onload = () => {
-        const size = 160;
-        const canvas = document.createElement("canvas");
-        canvas.width = size; canvas.height = size;
-        const ctx = canvas.getContext("2d");
-        const s = Math.min(img.width, img.height);
-        const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
-        ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
         URL.revokeObjectURL(url);
-        const webp = canvas.toDataURL("image/webp", 0.82);
-        const useWebp = webp.startsWith("data:image/webp");
-        const type = useWebp ? "image/webp" : "image/jpeg";
-        let q = 0.82, data = useWebp ? webp : canvas.toDataURL("image/jpeg", q);
-        while (data.length > 28000 && q > 0.4) {
-          q -= 0.08;
-          data = canvas.toDataURL(type, q);
-        }
+        const MAX = 55000; // stay under the Worker's 60,000-character cap
+        const draw = (size, quality) => {
+          const canvas = document.createElement("canvas");
+          canvas.width = size; canvas.height = size;
+          const ctx = canvas.getContext("2d", { alpha: true });
+          ctx.clearRect(0, 0, size, size);
+          const scale = Math.min(size / Math.max(1, img.width), size / Math.max(1, img.height));
+          const dw = img.width * scale, dh = img.height * scale;
+          ctx.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
+          const webp = canvas.toDataURL("image/webp", quality);
+          if (webp.startsWith("data:image/webp")) return webp;
+          return canvas.toDataURL("image/png");
+        };
+        let size = 200, q = 0.86, data = draw(size, q);
+        const isWebp = data.startsWith("data:image/webp");
+        while (data.length > MAX && isWebp && q > 0.5) { q -= 0.08; data = draw(size, q); }
+        while (data.length > MAX && size > 96) { size -= 20; data = draw(size, q); }
+        if (data.length > 60000) { reject(new Error("That photo is too large. Try a simpler cut-out.")); return; }
         resolve(data);
       };
       img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Couldn't read that image.")); };
