@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2a0f6e">
@@ -53,6 +54,36 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
   .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 6px 6px 12px; border-radius: 999px; background: rgba(255,255,255,.12); font-weight: 600; }
   .chip button { border: 0; background: rgba(0,0,0,.25); width: 22px; height: 22px; border-radius: 50%; cursor: pointer; line-height: 1; color: #fff; }
+  .plist { display: grid; gap: 6px; margin-bottom: 10px; }
+  .prow { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 8px; border-radius: 16px; background: rgba(255,255,255,.1); }
+  .prow .nm { flex: 1; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+  .av-thumb, .av-ph {
+    flex: none;
+    box-sizing: border-box;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 15px; line-height: 1;
+  }
+  .av-thumb {
+    width: 40px; height: 72px;
+    border-radius: 8px;
+    object-fit: contain;
+    object-position: center bottom;
+    background-color: #1c0a4d;
+    background-image:
+      linear-gradient(45deg, rgba(255,255,255,.16) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(255,255,255,.16) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(255,255,255,.16) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.16) 75%);
+    background-size: 10px 10px;
+    background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+  }
+  .av-ph {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.45);
+    background: #5a3a9a; color: #fff;
+  }
+  #avatarFile { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
   .empty { color: var(--muted); font-style: italic; font-size: 13px; }
   .days { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: thin; }
   .days button { flex: none; border: 1px solid var(--line); background: rgba(255,255,255,.06); border-radius: 14px; padding: 6px 10px; cursor: pointer; text-align: center; min-width: 52px; }
@@ -123,6 +154,7 @@
   const uid = () => "t" + Math.random().toString(36).slice(2, 9);
 
   let data = null;
+  let avatars = {};
   let pass = localStorage.getItem(PASS_KEY) || "";
   const today = todayRiyadh();
   const ui = { tab: new URLSearchParams(location.search).get("tab") || "teams", day: DATES.includes(today) ? today : "default", rosterDay: DATES.includes(today) ? today : DATES[0], swapping: null };
@@ -142,6 +174,165 @@
     if (res.status === 401) { const e = new Error("passcode"); e.code = 401; throw e; }
     if (!res.ok) throw new Error("HTTP " + res.status);
     return res.json();
+  }
+
+  async function apiAvatars(method, body) {
+    const res = await fetch(API + "/avatars", {
+      method, cache: "no-store",
+      headers: Object.assign({ "Content-Type": "application/json" }, method === "GET" ? {} : { "X-Passcode": pass }),
+      body: body == null ? undefined : JSON.stringify(body)
+    });
+    if (res.status === 401) { const e = new Error("passcode"); e.code = 401; throw e; }
+    if (res.status === 404) {
+      if (method === "GET") return {};
+      throw new Error("HTTP 404");
+    }
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  }
+
+  const AVATAR_PALETTE = [
+    { bg: "#EAF04A", fg: "#2a0f6e" },
+    { bg: "#f04a9a", fg: "#fff" },
+    { bg: "#5fe0c8", fg: "#0b3b34" },
+    { bg: "#ff9f43", fg: "#3a1d00" },
+    { bg: "#8ab4ff", fg: "#0b1c40" },
+    { bg: "#c58cff", fg: "#1a0833" },
+    { bg: "#7bd389", fg: "#0c2e14" },
+    { bg: "#ff6b6b", fg: "#3a0a0a" }
+  ];
+  function initials(name) {
+    const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "?";
+    if (parts.length === 1) return Array.from(parts[0])[0].toUpperCase();
+    const a = Array.from(parts[0])[0], b = Array.from(parts[parts.length - 1])[0];
+    return (a + b).toUpperCase();
+  }
+  function colorFor(name) {
+    let h = 0; const s = String(name);
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
+  }
+  function thumbHtml(name) {
+    const src = avatars[name];
+    if (src) return `<img class="av-thumb" src="${esc(src)}" alt="${esc(name)}">`;
+    const c = colorFor(name);
+    return `<span class="av-ph" style="background:${c.bg};color:${c.fg}" aria-hidden="true">${esc(initials(name))}</span>`;
+  }
+  function isImageFile(file) {
+    if (!file) return false;
+    if (!file.type) return /\.(png|jpe?g|webp|gif|heic|heif)$/i.test(file.name || "");
+    return file.type.startsWith("image/");
+  }
+  function loadImage(file) {
+    return new Promise((resolve, reject) => {
+      const fail = () => reject(new Error("Couldn't read that image."));
+      const fromEl = () => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = () => { URL.revokeObjectURL(url); fail(); };
+        img.src = url;
+      };
+      if (typeof createImageBitmap === "function") {
+        createImageBitmap(file).then(resolve).catch(fromEl);
+      } else fromEl();
+    });
+  }
+  function trimAlphaBox(img) {
+    const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    const ctx = c.getContext("2d", { alpha: true });
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0);
+    let minX = w, minY = h, maxX = -1, maxY = -1;
+    try {
+      const data = ctx.getImageData(0, 0, w, h).data;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (data[(y * w + x) * 4 + 3] > 8) {
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+    } catch (e) { /* tainted canvas; use the full image */ }
+    if (maxX < minX) return { sx: 0, sy: 0, sw: w, sh: h };
+    const pad = 2;
+    const sx = Math.max(0, minX - pad), sy = Math.max(0, minY - pad);
+    const ex = Math.min(w, maxX + 1 + pad), ey = Math.min(h, maxY + 1 + pad);
+    return { sx, sy, sw: Math.max(1, ex - sx), sh: Math.max(1, ey - sy) };
+  }
+  let webpAlphaOk = null;
+  function probeWebpAlpha() {
+    if (webpAlphaOk !== null) return Promise.resolve(webpAlphaOk);
+    return new Promise(resolve => {
+      const c = document.createElement("canvas");
+      c.width = 2; c.height = 2;
+      const ctx = c.getContext("2d", { alpha: true });
+      ctx.clearRect(0, 0, 2, 2);
+      ctx.fillStyle = "rgba(0,255,0,0.6)";
+      ctx.fillRect(0, 0, 1, 1);
+      let url = "";
+      try { url = c.toDataURL("image/webp", 0.8); } catch (e) { webpAlphaOk = false; resolve(false); return; }
+      if (!url.startsWith("data:image/webp")) { webpAlphaOk = false; resolve(false); return; }
+      const im = new Image();
+      im.onload = () => {
+        const t = document.createElement("canvas");
+        t.width = 2; t.height = 2;
+        const x = t.getContext("2d", { alpha: true });
+        x.clearRect(0, 0, 2, 2);
+        x.drawImage(im, 0, 0);
+        const clear = x.getImageData(1, 1, 1, 1).data[3] < 16;
+        const kept = x.getImageData(0, 0, 1, 1).data[3] > 20;
+        webpAlphaOk = clear && kept;
+        resolve(webpAlphaOk);
+      };
+      im.onerror = () => { webpAlphaOk = false; resolve(false); };
+      im.src = url;
+    });
+  }
+  async function resizeAvatar(file) {
+    if (!isImageFile(file)) throw new Error("Please choose an image.");
+    const img = await loadImage(file);
+    const box = trimAlphaBox(img);
+    const MAX = 300000; // stay under the Worker's 400,000-character cap
+    const MAX_SIDE = 360;
+    const useWebp = await probeWebpAlpha();
+    const draw = (maxSide, quality) => {
+      const scale = Math.min(1, maxSide / Math.max(box.sw, box.sh));
+      const dw = Math.max(1, Math.round(box.sw * scale));
+      const dh = Math.max(1, Math.round(box.sh * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = dw; canvas.height = dh;
+      const ctx = canvas.getContext("2d", { alpha: true });
+      ctx.clearRect(0, 0, dw, dh); // never fill black / opaque
+      ctx.drawImage(img, box.sx, box.sy, box.sw, box.sh, 0, 0, dw, dh);
+      if (useWebp) {
+        const webp = canvas.toDataURL("image/webp", quality);
+        if (webp.startsWith("data:image/webp")) return webp;
+      }
+      return canvas.toDataURL("image/png");
+    };
+    let side = MAX_SIDE, q = 0.86, data = draw(side, q);
+    while (data.length > MAX && useWebp && q > 0.5) { q -= 0.08; data = draw(side, q); }
+    while (data.length > MAX && side > 96) { side -= 20; data = draw(side, q); }
+    if (data.startsWith("data:image/jpeg")) throw new Error("Couldn't keep the transparent background. Try a PNG cut-out.");
+    if (data.length > 400000) throw new Error("That photo is too large. Try a simpler cut-out.");
+    return data;
+  }
+  async function saveAvatars() {
+    setStatus("Saving photo…");
+    try {
+      await apiAvatars("PUT", avatars);
+      setStatus("Saved ✓", "ok");
+    } catch (e) {
+      if (e.code === 401) { localStorage.removeItem(PASS_KEY); pass = ""; renderGate("Passcode no longer valid. Enter it again."); return; }
+      setStatus("Photo not saved", "err");
+    }
   }
 
   function setStatus(t, cls) { statusText = t; statusCls = cls || ""; const el = document.getElementById("status"); if (el) { el.textContent = t; el.className = "status " + statusCls; } }
@@ -184,14 +375,18 @@
   async function start() {
     if (!API) { app.innerHTML = `<div class="gate card"><h2>Not connected</h2><div class="hint">The storage server address isn't set in config.js yet.</div></div>`; return; }
     if (!pass) return renderGate();
-    try { data = normalize(await api("GET")); setStatus(data.updatedAt ? "Synced" : "Ready", "ok"); }
+    try {
+      data = normalize(await api("GET"));
+      try { avatars = (await apiAvatars("GET")) || {}; } catch (e) { avatars = {}; }
+      setStatus(data.updatedAt ? "Synced" : "Ready", "ok");
+    }
     catch (e) { app.innerHTML = `<div class="banner">Can't load data from the server. Pull to refresh or try again shortly.</div>`; return; }
     render();
   }
 
   document.addEventListener("visibilitychange", async () => {
     if (document.visibilityState !== "visible" || !data || dirty || ui.swapping) return;
-    try { data = normalize(await api("GET")); render(); } catch (e) {}
+    try { data = normalize(await api("GET")); try { avatars = (await apiAvatars("GET")) || {}; } catch (e2) {} render(); } catch (e) {}
   });
 
   // ---------- Helpers ----------
@@ -226,10 +421,17 @@
         <div class="team-head"><span class="dot" style="background:${COLORS[i % COLORS.length]}"></span>
           <input type="text" class="tname" value="${esc(t.name)}" aria-label="Team name">
           <button class="btn danger small" data-act="delteam">Delete</button></div>
-        <div class="chips">${t.people.length ? t.people.map((p, j) => `<span class="chip">${esc(p)}<button data-act="delperson" data-i="${j}" aria-label="Remove ${esc(p)}">×</button></span>`).join("") : `<span class="empty">No people yet</span>`}</div>
-        <form class="row addp"><input type="text" placeholder="Add a person's name" aria-label="Person name"><button class="btn small">Add</button></form>
+        <div class="plist">${t.people.length ? t.people.map((p, j) => `<div class="prow">
+            ${thumbHtml(p)}
+            <span class="nm">${esc(p)}</span>
+            <button class="btn ghost small" data-act="setavatar" data-name="${esc(p)}">${avatars[p] ? "Change photo" : "Add photo"}</button>
+            ${avatars[p] ? `<button class="btn danger small" data-act="delavatar" data-name="${esc(p)}">Remove photo</button>` : ""}
+            <button class="btn danger small" data-act="delperson" data-i="${j}" aria-label="Remove ${esc(p)}">×</button>
+          </div>`).join("") : `<span class="empty">No people yet</span>`}</div>
+        <form class="row addp"><input type="text" placeholder="Add a person's name, then add their photo" aria-label="Person name"><button class="btn small">Add</button></form>
       </div>`).join("");
-    return `<div class="hint">These are the base teams. Swaps you make on a single session never change them.</div>
+    return `<div class="hint">These are the base teams. Add a name, then add their photo — it appears on the /in schedule in place of the name. Swaps you make on a single session never change the base team.</div>
+      <input id="avatarFile" type="file" accept="image/*">
       <form class="card row" id="newTeam"><input type="text" placeholder="New team name, e.g. Team A" aria-label="New team name"><button class="btn">+ Team</button></form>
       ${cards || `<div class="card empty">No teams yet. Create one above.</div>`}`;
   }
@@ -296,6 +498,32 @@
     return `<div class="hint">Read-only view of who is on each session, with swaps applied.</div>${dayStrip(d, false, "rosterStrip")}${rows}`;
   }
 
+  // ---------- Avatar picker ----------
+  let avatarTarget = null;
+  function pickAvatar(name) {
+    avatarTarget = name;
+    const inp = document.getElementById("avatarFile");
+    if (!inp) return;
+    inp.value = "";
+    inp.onchange = async () => {
+      const file = inp.files && inp.files[0];
+      const who = avatarTarget;
+      avatarTarget = null;
+      inp.value = "";
+      if (!file || !who) return;
+      try {
+        setStatus("Resizing photo…");
+        const dataUrl = await resizeAvatar(file);
+        avatars[who] = dataUrl;
+        await saveAvatars();
+        render();
+      } catch (e) {
+        setStatus(e.message || "Couldn't use that image", "err");
+      }
+    };
+    inp.click();
+  }
+
   // ---------- Events ----------
   function bind() {
     document.getElementById("lockBtn").onclick = () => { localStorage.removeItem(PASS_KEY); pass = ""; renderGate(); };
@@ -315,6 +543,14 @@
         const again = app.querySelector(`[data-team="${t.id}"] .addp input`); if (again) again.focus();
       };
       card.querySelectorAll("[data-act=delperson]").forEach(b => b.onclick = () => change(() => t.people.splice(Number(b.dataset.i), 1)));
+      card.querySelectorAll("[data-act=setavatar]").forEach(b => b.onclick = () => pickAvatar(b.dataset.name));
+      card.querySelectorAll("[data-act=delavatar]").forEach(b => b.onclick = () => {
+        const name = b.dataset.name;
+        if (!confirm("Remove the photo for " + name + "?")) return;
+        delete avatars[name];
+        saveAvatars();
+        render();
+      });
       card.querySelector("[data-act=delteam]").onclick = () => {
         if (!confirm(`Delete "${t.name}"? It will be removed from every session it's assigned to.`)) return;
         change(() => {

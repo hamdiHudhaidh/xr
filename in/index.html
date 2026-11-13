@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
@@ -147,6 +148,97 @@
     .team .nm { font-weight: 800; line-height: 1.05; white-space: nowrap; max-width: 100%; padding: 0 6%; overflow: hidden; text-overflow: ellipsis; }
     .team .nm.members { white-space: normal; text-overflow: clip; padding: 0 9%; line-height: 1.1; font-weight: 700; }
     .team.past { border-color: rgba(255,255,255,0.25); color: #d6d3df; background: #3a3550; }
+    /* Rocking cut-out photos (transparency preserved) plus a name. */
+    #team-layer { overflow: visible; }
+    .team.avatars {
+      flex-direction: row;
+      align-items: flex-end;
+      justify-content: center;
+      overflow: visible;
+      /* Background lives on ::before so Safari doesn't clip tall cut-outs to the rounded chip. */
+      background: transparent;
+      border-color: transparent;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .team.avatars::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: rgba(36, 16, 99, 0.94);
+      border: 0.14vmin solid rgba(234, 240, 74, 0.55);
+      border-radius: 999px;
+      box-shadow: 0 0.2vmin 0.8vmin rgba(10, 0, 40, 0.35);
+    }
+    .team.avatars.past::before {
+      border-color: rgba(255,255,255,0.25);
+      background: rgba(58, 53, 80, 0.94);
+      box-shadow: none;
+    }
+    .member {
+      position: relative;
+      z-index: 1;
+      flex: none;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      overflow: visible;
+    }
+    .av-name {
+      width: 100%;
+      text-align: center;
+      color: #EAF04A;
+      font-family: Cairo, "Noto Sans Arabic", "Segoe UI", system-ui, -apple-system, sans-serif;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      unicode-bidi: plaintext;
+      flex: none;
+    }
+    .team.past .av-name { color: #d6d3df; }
+    .av {
+      flex: none;
+      box-sizing: border-box;
+      animation: rock 2.6s ease-in-out infinite;
+      transform-origin: 50% 80%;
+      will-change: transform;
+    }
+    .av.photo {
+      object-fit: contain;
+      object-position: center bottom;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .av.fallback {
+      border-radius: 50%;
+      border: 0.2vmin solid rgba(255,255,255,0.85);
+      background: #5a3a9a;
+      color: #fff;
+      font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans Arabic", sans-serif;
+      font-weight: 800;
+      display: grid;
+      place-items: center;
+      line-height: 1;
+    }
+    .team.past .av {
+      filter: grayscale(1) brightness(0.8) contrast(0.92);
+      animation: none;
+      transform: none;
+    }
+    .team.past .av.fallback { border-color: rgba(255,255,255,0.4); }
+    @keyframes rock {
+      0%, 100% { transform: rotate(-6deg); }
+      50% { transform: rotate(6deg); }
+    }
     @keyframes hlpulse {
       0%, 100% { box-shadow: 0 0 1vmin #EAF04A, 0 0 2.5vmin rgba(234,240,74,0.45), inset 0 0 1vmin rgba(234,240,74,0.25); }
       50% { box-shadow: 0 0 1.8vmin #EAF04A, 0 0 5vmin rgba(234,240,74,0.7), inset 0 0 2vmin rgba(234,240,74,0.45); }
@@ -358,7 +450,7 @@
       }
 
 
-      // ---- Finished sessions (greyed) and assigned member names ----
+      // ---- Finished sessions (greyed) and member avatars (test) ----
       const inEvent = ymd => ymd >= "2026-11-12" && ymd <= "2026-11-30";
       const pct = (v, total) => (v / total * 100) + "%";
       function place(el, i, x, y, w, h) {
@@ -377,41 +469,124 @@
           doneLayer.appendChild(el);
         });
       }
+      const AVATAR_PALETTE = [
+        { bg: "#EAF04A", fg: "#2a0f6e" },
+        { bg: "#f04a9a", fg: "#fff" },
+        { bg: "#5fe0c8", fg: "#0b3b34" },
+        { bg: "#ff9f43", fg: "#3a1d00" },
+        { bg: "#8ab4ff", fg: "#0b1c40" },
+        { bg: "#c58cff", fg: "#1a0833" },
+        { bg: "#7bd389", fg: "#0c2e14" },
+        { bg: "#ff6b6b", fg: "#3a0a0a" }
+      ];
+      function initials(name) {
+        const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+        if (!parts.length) return "?";
+        if (parts.length === 1) return Array.from(parts[0])[0].toUpperCase();
+        const a = Array.from(parts[0])[0], b = Array.from(parts[parts.length - 1])[0];
+        return (a + b).toUpperCase();
+      }
+      function colorFor(name) {
+        let h = 0;
+        const s = String(name);
+        for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+        return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
+      }
       // Free space between the TO time and the FROM label, centred on the arrow (poster px).
+      // Taller than the name-only chip so the avatar and the label both fit.
       const ARROW_X = [320, 320, 320, 320, 320, 320, 332, 320];
-      const ZONE_W = 260, ZONE_TOP = 13, ZONE_H = 65;
+      const ZONE_W = 304, ZONE_TOP = 4, ZONE_H = 84;
       let teamData = null;
+      let avatars = {};
       function renderTeams(now) {
         teamLayer.innerHTML = "";
         if (!teamData || !window.XR_resolve || !inEvent(now.ymd)) return;
         const unit = box.clientHeight / IMG_H; // screen px per poster px
         SESSIONS.forEach(([, b], i) => {
           const r = window.XR_resolve(teamData, now.ymd, i + 1);
-          const names = (r.people || []).map(x => x.name).filter(Boolean);
-          if (!names.length) return;
+          const people = (r.people || []).filter(x => x && x.name);
+          if (!people.length) return;
           const el = document.createElement("div");
-          el.className = "team" + (now.mins >= toMin(b) ? " past" : "");
+          el.className = "team avatars" + (now.mins >= toMin(b) ? " past" : "");
           place(el, i, ARROW_X[i] - ZONE_W / 2, ZONE_TOP, ZONE_W, ZONE_H);
-          const nm = document.createElement("div");
-          nm.className = "nm members"; nm.textContent = names.join(" · ");
-          el.appendChild(nm);
+          const n = people.length;
+          const padX = 6, padY = 4;
+          const gap = n <= 3 ? 8 : n <= 4 ? 5 : n <= 6 ? 4 : 3;
+          const availW = ZONE_W - padX * 2;
+          const colW = (availW - gap * Math.max(0, n - 1)) / n;
+          // Names stay readable on iPad-scale posters; the photo box is taller than it is wide so a full-body cut-out fits.
+          const namePx = Math.max(9.5, 11.5 * unit);
+          const nameGap = Math.max(1.5, 2 * unit);
+          const availH = (ZONE_H - padY * 2) * unit;
+          const avW = Math.max(16, colW * unit);
+          const avH = Math.max(avW * 1.05, availH - namePx * 1.15 - nameGap);
+          el.style.gap = (gap * unit) + "px";
+          el.style.padding = (padY * unit) + "px " + (padX * unit) + "px";
+          people.forEach((p, j) => {
+            const cell = document.createElement("div");
+            cell.className = "member";
+            cell.style.width = avW.toFixed(2) + "px";
+            const src = avatars[p.name];
+            const av = document.createElement(src ? "img" : "div");
+            av.className = "av " + (src ? "photo" : "fallback");
+            av.style.animationDuration = (2.2 + (j % 4) * 0.22) + "s";
+            av.style.animationDelay = (-j * 0.37) + "s";
+            av.title = p.name;
+            if (src) {
+              av.style.width = avW.toFixed(2) + "px";
+              av.style.height = avH.toFixed(2) + "px";
+              av.src = src;
+              av.alt = p.name;
+              av.draggable = false;
+            } else {
+              const s = Math.min(avW, Math.max(18, avH * 0.55));
+              av.style.width = av.style.height = s.toFixed(2) + "px";
+              av.textContent = initials(p.name);
+              const col = colorFor(p.name);
+              av.style.background = col.bg;
+              av.style.color = col.fg;
+              av.style.fontSize = (s * 0.42).toFixed(2) + "px";
+            }
+            const nm = document.createElement("div");
+            nm.className = "av-name";
+            nm.textContent = p.name;
+            nm.title = p.name;
+            nm.style.marginTop = nameGap.toFixed(2) + "px";
+            nm.style.fontSize = namePx.toFixed(2) + "px";
+            cell.appendChild(av);
+            cell.appendChild(nm);
+            el.appendChild(cell);
+          });
           teamLayer.appendChild(el);
-          // Largest font (26 poster px down to 11) that fits the chip, wrapping to at most 2 lines.
-          let fs = 26;
-          nm.style.fontSize = fs * unit + "px";
-          while (fs > 11 && (nm.scrollWidth > nm.clientWidth + 1 || nm.scrollHeight > el.clientHeight * 0.9)) { fs -= 1; nm.style.fontSize = fs * unit + "px"; }
+          el.querySelectorAll(".av-name").forEach(nm => {
+            let fs = namePx;
+            // Don't shrink below a readable size; 4–5 letter names should fit without an ellipsis.
+            const minFs = Math.max(8.5, Math.min(namePx, 9.5), namePx * 0.82);
+            while (fs > minFs + 0.05 && nm.scrollWidth > nm.clientWidth + 0.5) {
+              fs = Math.max(minFs, fs - 0.3);
+              nm.style.fontSize = fs.toFixed(2) + "px";
+            }
+          });
         });
       }
       async function loadTeams() {
         if (!window.XR_API) return;
         try {
-          const res = await fetch(window.XR_API + "/data", { cache: "no-store" });
-          if (!res.ok) throw new Error(res.status);
-          teamData = await res.json();
-        } catch (e) { teamData = null; }
+          const [dRes, aRes] = await Promise.all([
+            fetch(window.XR_API + "/data", { cache: "no-store" }),
+            fetch(window.XR_API + "/avatars", { cache: "no-store" })
+          ]);
+          if (!dRes.ok) throw new Error(dRes.status);
+          teamData = await dRes.json();
+          avatars = (aRes.ok ? await aRes.json() : {}) || {};
+        } catch (e) { teamData = null; avatars = {}; }
         updateHighlight();
       }
       window.addEventListener("resize", () => { layoutBox(); updateHighlight(); });
+      if (document.fonts) {
+        document.fonts.load("700 14px Cairo").catch(() => {});
+        document.fonts.ready.then(() => updateHighlight());
+      }
       loadTeams();
       setInterval(loadTeams, 45000);
       window.addEventListener("resize", layoutBox);
