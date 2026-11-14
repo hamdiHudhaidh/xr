@@ -31,7 +31,6 @@
   .status { margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.1); color: var(--muted); white-space: nowrap; }
   .status.ok { color: var(--yellow); }
   .status.err { background: var(--pink); color: #fff; }
-  .lock { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--muted); cursor: pointer; text-decoration: none; display: inline-block; }
   .hint { color: var(--muted); font-size: 14px; margin: 0 2px 12px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 16px; margin-bottom: 12px; box-shadow: 0 6px 24px rgba(10,0,40,.25); }
   .banner { background: var(--pink); color: #fff; padding: 10px 14px; border-radius: 16px; margin-bottom: 12px; font-weight: 600; }
@@ -100,13 +99,6 @@
   .dt-stat.e .lbl .ar, .dt-stat.e .lbl .en { color: var(--yellow); }
   .dt-stat.c .lbl .ar, .dt-stat.c .lbl .en { color: #fff; }
   .dt-stat .lbl .en { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-
-  .off-card { border-color: rgba(234,240,74,.4); }
-  .off-card .off-title { margin-bottom: 8px; display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: baseline; gap: 12px; }
-  .off-card .off-title .ar { font-family: Cairo, "Noto Sans Arabic", sans-serif; font-weight: 800; font-size: 18px; direction: rtl; color: var(--yellow); }
-  .off-card .off-title .en { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-  .off-people { display: flex; flex-wrap: wrap; gap: 8px; }
-  .off-chip { background: rgba(234,240,74,.16); border: 1px solid rgba(234,240,74,.4); color: var(--yellow); font-weight: 800; padding: 6px 12px; border-radius: 999px; }
 
   .sess-card.counted { border-color: rgba(234,240,74,.45); }
   .sess-card.empty { opacity: 0.92; }
@@ -198,24 +190,9 @@
     }
     return out;
   }
-  function normalizeOffDays(raw) {
-    const out = {};
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
-    for (const k of Object.keys(raw)) {
-      const list = raw[k];
-      if (!Array.isArray(list)) continue;
-      const seen = new Set(), names = [];
-      list.forEach(n => {
-        const name = String(n || "").trim();
-        if (name && !seen.has(name)) { seen.add(name); names.push(name); }
-      });
-      if (names.length) out[k] = names;
-    }
-    return out;
-  }
   function normalize(d) {
     d = d && typeof d === "object" ? d : {};
-    const known = { version: 1, teams: Array.isArray(d.teams) ? d.teams : [], daily: d.daily || {}, days: d.days || {}, swaps: d.swaps || {}, offDays: normalizeOffDays(d.offDays), numbers: normalizeNumbers(d.numbers), updatedAt: d.updatedAt || null };
+    const known = { version: 1, teams: Array.isArray(d.teams) ? d.teams : [], daily: d.daily || {}, days: d.days || {}, swaps: d.swaps || {}, offDays: d.offDays || {}, numbers: normalizeNumbers(d.numbers), updatedAt: d.updatedAt || null };
     for (const k of Object.keys(d)) if (!(k in known)) known[k] = d[k];
     return known;
   }
@@ -279,7 +256,6 @@
     });
     return { p: p, e: e, t: p + e, counted: counted };
   }
-  function offNames(ymd) { return ((data && data.offDays) || {})[ymd] || []; }
   function dayHasCounts(ymd) { return !!Object.keys(((data && data.numbers) || {})[ymd] || {}).length; }
 
   function setDate(ymd, push) {
@@ -351,7 +327,6 @@
     const sy = window.scrollY;
     const inRange = FIRST <= selected && selected <= LAST;
     const t = dayTotals();
-    const off = offNames(selected);
     const isToday = selected === today;
     const prev = shiftDay(selected, -1);
     const next = shiftDay(selected, 1);
@@ -374,19 +349,12 @@
             '<div class="dt-stat e"><div class="n">' + t.e + '</div><div class="lbl"><span class="ar">التفاعل</span><span class="en">Engagement</span></div></div>' +
             '<div class="dt-stat c"><div class="n">' + t.t + '</div><div class="lbl"><span class="ar">المجموع الكلي</span><span class="en">Total</span></div></div>' +
           "</div></div>" +
-        (off.length
-          ? '<div class="card off-card"><div class="off-title"><div class="ar">إجازة اليوم</div><div class="en">Off today</div></div><div class="off-people">' +
-            off.map(n => '<span class="off-chip">' + esc(n) + "</span>").join("") +
-            "</div></div>"
-          : "") +
         SESS.map((pair, i) => sessCard(i, pair)).join("");
     }
 
     app.innerHTML =
       "<header><h1>XR Hub <span>Fares</span></h1>" +
-        '<div class="status ' + statusCls + '" id="status">' + esc(statusText) + "</div>" +
-        '<a class="lock" href="../clicker/">Clicker</a>' +
-        '<a class="lock" href="../kpi/">KPI</a></header>' +
+        '<div class="status ' + statusCls + '" id="status">' + esc(statusText) + "</div></header>" +
       '<div class="hint">Read-only session numbers for the collector. Switch days to review counts. Nothing is edited here.</div>' +
       '<div class="card day-bar">' +
         '<div class="day-nav">' +
