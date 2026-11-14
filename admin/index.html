@@ -113,8 +113,8 @@
   .person .old { color: var(--muted); text-decoration: line-through; font-weight: 500; }
   .person .arr { color: var(--yellow); margin: 0 6px; font-weight: 900; }
   .person .new { color: var(--yellow); font-weight: 800; }
-  .swapbox { display: flex; gap: 6px; flex: 1; }
-  .swapbox input { padding: 7px 10px; }
+  .swapbox { display: flex; gap: 6px; flex: 1; min-width: 0; align-items: center; }
+  .swapbox select { padding: 7px 10px; flex: 1; min-width: 0; }
   .roster-team { font-weight: 800; color: var(--yellow); }
   .roster-people { margin-top: 4px; color: #fff; }
   .roster-people .s { color: var(--yellow); font-weight: 700; }
@@ -516,6 +516,19 @@
   function teamOptions(sel) {
     return `<option value="">— No team —</option>` + data.teams.map(t => `<option value="${esc(t.id)}" ${t.id === sel ? "selected" : ""}>${esc(t.name)}</option>`).join("");
   }
+  function rosterNames(except) {
+    const seen = new Set(), names = [];
+    (data.teams || []).forEach(team => (team.people || []).forEach(p => {
+      const name = String(p || "").trim();
+      if (!name || name === except || seen.has(name)) return;
+      seen.add(name);
+      names.push(name);
+    }));
+    return names;
+  }
+  function swapOptions(from) {
+    return `<option value="">No swap</option>` + rosterNames(from).map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
+  }
   function cleanSwaps(ymd, s) { delete data.swaps[ymd + "|" + s]; }
 
   // ---------- Render ----------
@@ -533,8 +546,18 @@
       <section class="${ui.tab === "teams" ? "on" : ""}">${renderTeams()}</section>
       <section class="${ui.tab === "sessions" ? "on" : ""}">${renderSessions()}</section>
       <section class="${ui.tab === "numbers" ? "on" : ""}">${renderNumbers()}</section>`;
-    window.scrollTo(0, sy);
     bind();
+    window.scrollTo(0, sy);
+    alignDayStrip();
+  }
+
+  function alignDayStrip() {
+    const on = document.querySelector("section.on .days .on");
+    if (!on) return;
+    const scroller = on.closest(".days");
+    if (!scroller) return;
+    const left = on.offsetLeft - (scroller.clientWidth - on.offsetWidth) / 2;
+    scroller.scrollLeft = Math.max(0, Math.min(left, scroller.scrollWidth - scroller.clientWidth));
   }
 
   function renderTeams() {
@@ -592,7 +615,7 @@
             if (p.swappedFrom) return `<div class="person sw"><span class="nm"><span class="old">${esc(p.swappedFrom)}</span><span class="arr">→</span><span class="new">${esc(p.name)}</span></span><button class="btn ghost small" data-act="undo" data-s="${s}" data-from="${esc(p.swappedFrom)}">Undo</button></div>`;
             if (ui.swapping && ui.swapping.key === key && ui.swapping.from === p.name) {
               return `<div class="person"><span class="nm" style="flex:none">${esc(p.name)} <span class="arr">→</span></span>
-                <form class="swapbox" data-s="${s}" data-from="${esc(p.name)}"><input type="text" list="allPeople" placeholder="Replacement name" autofocus><button class="btn small">Swap</button><button type="button" class="btn ghost small" data-act="cancelswap">✕</button></form></div>`;
+                <form class="swapbox" data-s="${s}" data-from="${esc(p.name)}"><select aria-label="Replacement for ${esc(p.name)}">${swapOptions(p.name)}</select><button type="button" class="btn ghost small" data-act="cancelswap">✕</button></form></div>`;
             }
             return `<div class="person"><span class="nm">${esc(p.name)}</span><button class="btn ghost small" data-act="swap" data-s="${s}" data-from="${esc(p.name)}">Swap</button></div>`;
           }).join("") : `<span class="empty">This team has no people yet.</span>`}</div>`;
@@ -603,11 +626,10 @@
         <select data-sess="${s}" aria-label="Team for session ${s}" style="border-left:6px solid ${teamColor(sel)}">${teamOptions(sel)}</select>
         ${note ? `<div class="tagline">${note}</div>` : ""}${people}</div></div>`;
     }).join("");
-    const all = [...new Set(data.teams.flatMap(t => t.people))];
     const offCard = isDef
       ? `<div class="card"><div class="hint" style="margin:0">Pick a day above to mark who is off that day. Off days are set per date, not as a default.</div></div>`
       : renderOffCard(day);
-    return `${dayStrip(day, true, "dayStrip")}${bar}${offCard}${items}<datalist id="allPeople">${all.map(p => `<option value="${esc(p)}">`).join("")}</datalist>`;
+    return `${dayStrip(day, true, "dayStrip")}${bar}${offCard}${items}`;
   }
 
   function renderOffCard(day) {
@@ -872,7 +894,8 @@
         else delete data.offDays[ui.day];
       });
     });
-    const strip = document.querySelector("section.on .days .on"); if (strip) strip.scrollIntoView({ block: "nearest", inline: "center" });
+    // Day-chip alignment is handled in render() via alignDayStrip(), which
+    // only scrolls the horizontal strip and does not move the page.
 
     app.querySelectorAll("select[data-sess]").forEach(sel => sel.onchange = () => {
       const s = sel.dataset.sess, v = sel.value, day = ui.day;
@@ -898,14 +921,24 @@
         for (const k in data.swaps) { const [d, s] = k.split("|"); const r = resolve(d, s); data.swaps[k] = (data.swaps[k] || []).filter(w => r.team && r.team.people.includes(w.from)); if (!data.swaps[k].length) delete data.swaps[k]; }
       });
     };
-    app.querySelectorAll("[data-act=swap]").forEach(b => b.onclick = () => { ui.swapping = { key: ui.day + "|" + b.dataset.s, from: b.dataset.from }; render(); const i = app.querySelector(".swapbox input"); if (i) i.focus(); });
+    app.querySelectorAll("[data-act=swap]").forEach(b => b.onclick = () => {
+      ui.swapping = { key: ui.day + "|" + b.dataset.s, from: b.dataset.from };
+      render();
+      const i = app.querySelector(".swapbox select");
+      if (i) i.focus({ preventScroll: true });
+    });
     app.querySelectorAll("[data-act=cancelswap]").forEach(b => b.onclick = () => { ui.swapping = null; render(); });
-    app.querySelectorAll(".swapbox").forEach(f => f.onsubmit = ev => {
-      ev.preventDefault(); const v = f.querySelector("input").value.trim(); if (!v) return;
-      const key = ui.day + "|" + f.dataset.s, from = f.dataset.from;
-      ui.swapping = null;
-      if (v === from) { render(); return; }
-      change(() => { const list = (data.swaps[key] || []).filter(w => w.from !== from); list.push({ from, to: v }); data.swaps[key] = list; });
+    app.querySelectorAll(".swapbox").forEach(f => {
+      f.onsubmit = ev => ev.preventDefault();
+      const sel = f.querySelector("select");
+      if (!sel) return;
+      sel.onchange = () => {
+        const v = sel.value.trim();
+        const key = ui.day + "|" + f.dataset.s, from = f.dataset.from;
+        if (!v || v === from) { ui.swapping = null; render(); return; }
+        ui.swapping = null;
+        change(() => { const list = (data.swaps[key] || []).filter(w => w.from !== from); list.push({ from, to: v }); data.swaps[key] = list; });
+      };
     });
     app.querySelectorAll("[data-act=undo]").forEach(b => b.onclick = () => change(() => {
       const key = ui.day + "|" + b.dataset.s; data.swaps[key] = (data.swaps[key] || []).filter(w => w.from !== b.dataset.from); if (!data.swaps[key].length) delete data.swaps[key];
