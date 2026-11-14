@@ -151,11 +151,47 @@
   .constel.p .lbl { color: var(--lilac); }
   .constel.e .lbl { color: var(--yellow); }
   .constel.c .lbl { color: #fff; }
-  #piles3d {
-    position: fixed; inset: 0; z-index: 5; width: 100%; height: 100%;
-    display: block; pointer-events: none;
-  }
   #plots { position: fixed; inset: 0; z-index: 6; pointer-events: none; }
+  .pile {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    transform-origin: 50% 100%;
+    pointer-events: none;
+  }
+  .pile img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  .pile-shadow {
+    position: absolute;
+    left: 50%;
+    bottom: 1.5%;
+    width: 92%;
+    height: 11%;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.22) 45%, transparent 72%);
+    filter: blur(3px);
+    z-index: -1;
+    pointer-events: none;
+  }
+  .pile-warm {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    -webkit-mask-image: url("../assets/headset-pile.png");
+    mask-image: url("../assets/headset-pile.png");
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    mix-blend-mode: soft-light;
+    opacity: 0.8;
+  }
   .plot {
     position: absolute; display: flex; flex-direction: column; align-items: center;
     transform: translate(-50%, -100%);
@@ -303,7 +339,6 @@
   </div>
   <div id="woods" aria-hidden="true"></div>
   <div class="ground"><div id="floor"></div></div>
-  <canvas id="piles3d"></canvas>
   <header class="brand">
     <div class="kicker">XR Hub</div>
     <h1><span class="ar">المؤشرات</span><span class="en">KPI</span></h1>
@@ -319,8 +354,6 @@
       <img class="frame" src="../assets/bonfire-flame-3.png" alt="">
     </div>
   </section>
-  <script src="vendor/three.min.js"></script>
-  <script src="piles3d.js"></script>
   <script src="../config.js"></script>
   <script>
   (function () {
@@ -562,15 +595,8 @@
         '<div class="constel c"><div class="n">' + fmt(p + e) + '</div><div class="lbl"><span class="ar">المجموع الكلي</span><span class="en">Total</span></div></div>';
     }
 
-    function ensurePiles() {
-      const api = window.XRPiles3D;
-      if (!api) return false;
-      if (api.ready()) return true;
-      const canvas = document.getElementById("piles3d");
-      if (!api.init(canvas)) return false;
-      api.start();
-      return true;
-    }
+    const PILE_SRC = "../assets/headset-pile.png";
+    const PILE_ASPECT = 900 / 625;
 
     function renderPlots() {
       const root = document.getElementById("plots");
@@ -580,41 +606,55 @@
       const W = window.innerWidth || 1920;
       const H = window.innerHeight || 1080;
       const n = days.length;
-      const padX = W * 0.03;
-      const slot = (W - padX * 2) / Math.max(n, 1);
-      const baseY = H * 0.66;
-      const slots = days.map((ymd, i) => {
-        const rec = byDay[ymd] || { participants: 0, engagement: 0 };
-        return { ymd: ymd, index: i, participants: rec.participants || 0, engagement: rec.engagement || 0 };
+      const totals = days.map(function (ymd) {
+        const rec = byDay[ymd];
+        if (!rec) return 0;
+        return rec.total || ((rec.participants || 0) + (rec.engagement || 0));
       });
-      let meta = [];
-      if (ensurePiles()) meta = window.XRPiles3D.update(slots) || [];
-      const by = {};
-      meta.forEach(m => { by[m.ymd] = m; });
+      const busiest = Math.max(0, ...totals);
+
+      const totB = (document.getElementById("skyTotals") && document.getElementById("skyTotals").getBoundingClientRect().bottom) || (H * 0.16);
+      const baseY = H * 0.66;
+      const bulge = H * 0.012;
+      const labelPad = Math.max(96, H * 0.105);
+      const sideMargin = Math.max(20, W * 0.025);
+      let maxH = Math.max(72, baseY - totB - labelPad - 10);
+      const maxWCap = W * 0.19;
+      if (maxH * PILE_ASPECT > maxWCap) maxH = maxWCap / PILE_ASPECT;
+
+      const maxW = maxH * PILE_ASPECT;
+      const inset = Math.min(W * 0.18, Math.max(sideMargin, maxW / 2 + sideMargin));
+
       let html = "";
-      days.forEach((ymd, i) => {
+      days.forEach(function (ymd, i) {
         const rec = byDay[ymd];
         const p = dayParts(ymd);
         const isToday = ymd === today;
-        const filled = !!(rec && (rec.participants > 0 || rec.engagement > 0 || rec.total > 0));
-        const m = by[ymd];
+        const total = totals[i];
+        const filled = total > 0;
         const t = n === 1 ? 0.5 : i / (n - 1);
         const recede = Math.abs(t - 0.5) * 2;
-        const gx = m ? m.groundX : (padX + slot * (i + 0.5));
-        const gy = m ? m.groundY : baseY;
-        const z = Math.round((1 - recede) * 20);
+        const gx = n === 1 ? W / 2 : inset + t * (W - 2 * inset);
+        const gy = baseY + (1 - recede * recede) * bulge;
+        const z = 10 + i + Math.round((1 - recede) * 8);
         if (filled) {
-          const topY = (m && m.heap && m.heap.topY) ? m.heap.topY : Math.min(
-            m && m.p ? m.p.topY : gy,
-            m && m.e ? m.e.topY : gy
-          );
+          const scale = 0.35 + 0.65 * Math.sqrt(total / busiest);
+          const h = maxH * scale;
+          const w = h * PILE_ASPECT;
+          const topY = gy - h + 8;
+          const toward = gx < W / 2 ? "to right" : "to left";
+          html += '<div class="pile" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + gy.toFixed(1) + "px;width:" + w.toFixed(1) + "px;height:" + h.toFixed(1) + "px;z-index:" + z + '">';
+          html += '<div class="pile-shadow"></div>';
+          html += '<img src="' + PILE_SRC + '" alt="" draggable="false">';
+          html += '<div class="pile-warm" style="background:linear-gradient(' + toward + ', transparent 48%, rgba(255,150,60,0.28) 100%)"></div>';
+          html += "</div>";
           let stack = '<div class="plot-tot">' + fmt(rec.total) + "</div>";
           stack += '<div class="plot-val p">' + fmt(rec.participants || 0) + "</div>";
           stack += '<div class="plot-val e">' + fmt(rec.engagement || 0) + "</div>";
-          html += '<div class="plot-stack" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + topY.toFixed(1) + 'px;z-index:' + (z + 3) + '">' + stack + "</div>";
-          html += '<div class="plot ground' + (isToday ? " today" : "") + '" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + gy.toFixed(1) + 'px;z-index:' + z + '"><div class="shadow"></div><div class="day-lbl">' + p.day + "</div></div>";
+          html += '<div class="plot-stack" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + topY.toFixed(1) + "px;z-index:" + (z + 20) + '">' + stack + "</div>";
+          html += '<div class="plot ground' + (isToday ? " today" : "") + '" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + gy.toFixed(1) + "px;z-index:" + (z + 1) + '"><div class="day-lbl">' + p.day + "</div></div>";
         } else {
-          html += '<div class="plot empty ground' + (isToday ? " today" : "") + '" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + gy.toFixed(1) + 'px;z-index:' + z + '"><div class="pad"></div><div class="day-lbl">' + p.day + "</div></div>";
+          html += '<div class="plot empty ground' + (isToday ? " today" : "") + '" data-day="' + ymd + '" style="left:' + gx.toFixed(1) + "px;top:" + gy.toFixed(1) + "px;z-index:" + z + '"><div class="pad"></div><div class="day-lbl">' + p.day + "</div></div>";
         }
       });
       root.innerHTML = html;
