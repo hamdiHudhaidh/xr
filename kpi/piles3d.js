@@ -1,4 +1,4 @@
-/* Heaps: one Quest 3 headset per 5 combined daily units (ceil). */
+/* Heaps: a triangular mound of Quest 3s, scaled by each day's total. */
 (function (global) {
   "use strict";
   const CAP = 20000;
@@ -14,11 +14,13 @@
   let lastSig = "";
   const ORIGIN_Z = 6.22;
   let SPAN = 8.4;
-  const UNITS_PER_HEADSET = 5;
+  const MAX_ROWS = 5;
 
-  function heapCount(total) {
+  function rowCount(total, busiest) {
     const n = Math.max(0, Math.floor(Number(total) || 0));
-    return n > 0 ? Math.ceil(n / UNITS_PER_HEADSET) : 0;
+    if (n <= 0) return 0;
+    if (!(busiest > 0)) return 1;
+    return Math.max(1, Math.min(MAX_ROWS, Math.round((n / busiest) * MAX_ROWS)));
   }
 
 
@@ -128,71 +130,48 @@
     return { body: body, visor: visor };
   }
 
-  /* Loose layered mound: wide-ish base, rounded crown, slot-clamped radius. */
-  function settleDome(n, itemR, maxR, maxH, seed) {
+  /* Front-facing triangular mound: bottom row is widest, one headset on top.
+     Slight jitter and turn so the stack looks piled, not gridded. */
+  function settleTriangle(rows, itemR, seed) {
     const empty = { pos: [], R: 0, H: 0 };
-    if (n <= 0) return empty;
-    const capR = Math.max(itemR * 0.18, maxR);
+    if (rows <= 0) return empty;
     const rng = seedRng(seed);
-    const perLayer = capR >= itemR * 0.85 ? 3 : capR >= itemR * 0.45 ? 2 : 1;
-    const layers = Math.max(1, Math.ceil(n / perLayer));
-    let yStep = itemR * 0.7;
-    if (maxH > 0) {
-      const need = (layers - 1) * yStep + itemR * 1.15;
-      if (need > maxH) yStep = Math.max(itemR * 0.4, (maxH - itemR * 1.15) / Math.max(1, layers - 1));
-    }
-
+    const spacingX = itemR * 1.82;
+    const yStep = itemR * 1.12;
     const pts = [];
-    let placed = 0;
-    for (let layer = 0; placed < n && layer < 80; layer++) {
-      const tNorm = layers <= 1 ? 0 : Math.min(1, layer / (layers - 1));
-      /* Keep a full base for most of the height; round off only the crown. */
-      const taper = Math.max(0, (tNorm - 0.5) / 0.5);
-      const layerR = capR * Math.sqrt(Math.max(0, 1 - taper * taper));
-      let count;
-      if (layerR < itemR * 0.42) count = 1;
-      else if (layerR < itemR * 0.9) count = Math.min(2, n - placed);
-      else count = Math.min(n - placed, Math.max(2, Math.round((2 * Math.PI * layerR) / (itemR * 1.12))));
-      count = Math.max(1, Math.min(count, n - placed));
-      const rot = rng() * Math.PI * 2;
-      const y = itemR * 0.08 + layer * yStep;
-      for (let i = 0; i < count && placed < n; i++) {
-        const a = rot + (i / count) * Math.PI * 2 + (rng() - 0.5) * 0.18;
-        const rad = count === 1 ? rng() * layerR * 0.22 : layerR * (0.7 + rng() * 0.24);
+    for (let r = 0; r < rows; r++) {
+      const count = rows - r;
+      const y = itemR * 0.08 + r * yStep;
+      const rowW = (count - 1) * spacingX;
+      const rot = (rng() - 0.5) * 0.08;
+      for (let i = 0; i < count; i++) {
+        const x = (i - (count - 1) / 2) * spacingX + (rng() - 0.5) * itemR * 0.1;
+        const z = Math.sin(rot) * (x * 0.08) + (rng() - 0.5) * itemR * 0.16;
         pts.push({
-          x: Math.cos(a) * rad,
-          y: y + (rng() - 0.5) * yStep * 0.1,
-          z: Math.sin(a) * rad,
-          rx: (rng() - 0.5) * 0.22,
-          ry: (rng() - 0.5) * (rng() < 0.28 ? 1.15 : 0.75),
-          rz: (rng() - 0.5) * 0.16,
-          s: 0.94 + rng() * 0.12,
+          x: x,
+          y: y + (rng() - 0.5) * yStep * 0.06,
+          z: z,
+          rx: (rng() - 0.5) * 0.18,
+          ry: (rng() - 0.5) * 0.7,
+          rz: (rng() - 0.5) * 0.12,
+          s: 0.96 + rng() * 0.08,
           faceCam: true
         });
-        placed++;
       }
     }
-
-    const pos = pts.slice(0, n);
     let maxY = itemR, maxRad = 0;
-    for (let i = 0; i < pos.length; i++) {
-      maxY = Math.max(maxY, pos[i].y);
-      maxRad = Math.max(maxRad, Math.hypot(pos[i].x, pos[i].z));
+    for (let i = 0; i < pts.length; i++) {
+      maxY = Math.max(maxY, pts[i].y);
+      maxRad = Math.max(maxRad, Math.hypot(pts[i].x, pts[i].z));
     }
-    if (maxH > 0 && maxY > maxH && maxY > 0) {
-      const s = maxH / maxY;
-      for (let i = 0; i < pos.length; i++) pos[i].y *= s;
-      maxY = maxH;
-    }
-    return { pos: pos, R: Math.min(capR, Math.max(itemR, maxRad)), H: Math.max(itemR, maxY) };
+    const R = Math.max(itemR, maxRad);
+    return { pos: pts, R: R, H: Math.max(itemR, maxY) };
   }
 
-  function radiusForCount(n, itemR, maxR) {
-    const per = n >= 8 ? 3 : n >= 3 ? 2 : 1;
-    const layers = Math.max(1, Math.ceil(Math.max(1, n) / per));
-    const H = layers * itemR * 0.7;
-    const R = Math.max(itemR * 1.05, H * 0.55);
-    return Math.min(maxR, R);
+  function moundRadius(rows, itemR) {
+    if (rows <= 1) return itemR * 1.05;
+    const spacingX = itemR * 1.82;
+    return ((rows - 1) / 2) * spacingX + itemR * 1.08;
   }
 
   function init(el) {
@@ -337,7 +316,7 @@
   function update(slots) {
     if (!renderer) return [];
     resize();
-    const sig = JSON.stringify(slots.map(s => [s.ymd, s.participants || 0, s.engagement || 0, s.index, slots.length])) + "|v22";
+    const sig = JSON.stringify(slots.map(s => [s.ymd, s.participants || 0, s.engagement || 0, s.index, slots.length])) + "|v23";
     const size = (canvas.clientWidth || 0) + "x" + (canvas.clientHeight || 0);
     const full = sig + "|" + size;
     if (full === lastSig && heapMeta.length) return heapMeta;
@@ -347,39 +326,30 @@
     heapMeta = [];
 
     const n = Math.max(slots.length, 1);
-    const span = SPAN;
     const W = canvas.clientWidth || global.innerWidth || 1920;
     const H = canvas.clientHeight || global.innerHeight || 1080;
-    const slotW = span / n;
+    const pxPerWorldX = Math.abs(project(1, 0, ORIGIN_Z).x - project(0, 0, ORIGIN_Z).x) || 1;
+    const pxPerWorldY = Math.abs(project(0, 0, ORIGIN_Z).y - project(0, 1, ORIGIN_Z).y) || 1;
+
+    /* Big enough that a Quest 3 silhouette reads, small enough that a 5-row
+       base can inset inside the frame at 1024–1920. */
+    const targetPx = Math.max(46, Math.min(68, W * 0.034));
+    const instScale = Math.max(0.05, targetPx / pxPerWorldX);
+    const packR = instScale / 2.05;
+
+    /* Inset the day arc so the widest (5-row) mound, including its full base,
+       stays on screen with a side margin. */
+    const widestR = moundRadius(MAX_ROWS, packR);
+    const marginPx = Math.max(20, W * 0.025);
+    const inset = Math.max(0.055, (marginPx + widestR * pxPerWorldX) / W);
+    const left = Math.min(0.18, inset);
+    const right = 1 - left;
+    const span = ((right - left) * W) / pxPerWorldX;
+
     const mid = dayAnchor(Math.floor((n - 1) / 2), n, span);
     const groundPt = project(mid.wx, 0, mid.wz);
-    const pxPerWorldY = Math.abs(groundPt.y - project(mid.wx, 1, mid.wz).y) || 1;
-    const pxPerWorldX = Math.abs(project(mid.wx + 1, 0, mid.wz).x - groundPt.x) || 1;
-    const labelPad = 132;
-    const maxHpx = Math.max(48, groundPt.y - SAFE.top * H - labelPad);
-    const maxHworld = maxHpx / pxPerWorldY;
 
-    /* About 2.5–3× the previous 24–34px pieces, so the Quest 3 silhouette reads. */
-    const targetPx = Math.max(56, Math.min(80, W * 0.038));
-    let instScale = Math.max(0.05, targetPx / pxPerWorldX);
-    const itemR = instScale / 2.05;
-    /* Tight centre disk so large, slightly-turned headsets still leave a gap. */
-    const maxR = Math.min(slotW * 0.33, itemR * 0.95);
-
-    const busiest = Math.max(0, ...slots.map(s => heapCount((s.participants || 0) + (s.engagement || 0))));
-    let fitScale = instScale;
-    if (busiest > 0) {
-      const trial = settleDome(busiest, itemR, maxR, 0, "fit");
-      if (trial.H > maxHworld && trial.H > 0) {
-        const capped = settleDome(busiest, itemR, maxR, maxHworld, "fit");
-        if (capped.pos.length < busiest) {
-          const shrink = Math.max(0.9, maxHworld / trial.H);
-          fitScale = instScale * shrink;
-        }
-      }
-    }
-    instScale = fitScale;
-    const packR = instScale / 2.05;
+    const busiest = Math.max(0, ...slots.map(s => (s.participants || 0) + (s.engagement || 0)));
 
     slots.forEach((s, i) => {
       const a = dayAnchor(i, n, span);
@@ -398,14 +368,13 @@
       };
       if (filled) {
         const total = pN + eN;
-        const heads = heapCount(total);
-        const pileR = radiusForCount(heads, packR, maxR);
-        const mound = settleDome(heads, packR, pileR, maxHworld, "h:" + s.ymd);
+        const rows = rowCount(total, busiest);
+        const mound = settleTriangle(rows, packR, "h:" + s.ymd);
         writeInstances(meshBody, mound.pos, a.wx, a.wz, instScale, true, 1.08, 1.0, 1.0);
         writeInstances(meshVisor, mound.pos, a.wx, a.wz, instScale, true, 1.08, 1.0, 1.0);
         writeShadow(a.wx, a.wz, Math.max(mound.R, packR * 1.05));
-        const top = project(a.wx, mound.H + packR * 0.85, a.wz);
-        rec.heap = { n: heads, total: total, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: mound.H, R: mound.R };
+        const top = project(a.wx, mound.H + packR * 0.9, a.wz);
+        rec.heap = { n: mound.pos.length, rows: rows, total: total, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: mound.H, R: mound.R };
         rec.p = { n: pN, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: mound.H };
         rec.e = { n: eN, topX: top.x, topY: top.y, groundX: g.x, groundY: g.y, H: mound.H };
       }
