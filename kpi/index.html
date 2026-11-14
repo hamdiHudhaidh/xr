@@ -105,19 +105,14 @@
     position: fixed; left: 0; right: 0; bottom: 0; height: 56%;
     z-index: 4; pointer-events: none;
     background:
-      radial-gradient(ellipse 52% 36% at 50% 78%, rgba(110, 72, 36, 0.55), transparent 68%),
-      radial-gradient(ellipse 80% 55% at 50% 100%, rgba(28, 18, 10, 0.96), transparent 72%),
-      linear-gradient(180deg, transparent 0%, rgba(16, 28, 12, 0.45) 10%, #1c2414 24%, #2a2014 48%, #24180f 78%, #1a120c 100%);
-  }
-  .ground::before {
-    content: "";
-    position: absolute; left: -8%; right: -8%; top: 0; height: 22%;
-    background: radial-gradient(ellipse at center, rgba(10, 16, 8, 0.55), transparent 70%);
-  }
-  .ground::after {
-    content: "";
-    position: absolute; left: 12%; right: 12%; top: 28%; bottom: 2%;
-    background: radial-gradient(ellipse at 50% 55%, rgba(92, 60, 28, 0.42), rgba(50, 34, 16, 0.18) 48%, transparent 72%);
+      radial-gradient(ellipse 34% 20% at 50% 72%, rgba(92, 60, 28, 0.26), transparent 72%),
+      linear-gradient(180deg,
+        transparent 0%,
+        rgba(28, 40, 18, 0.38) 10%,
+        #243016 22%,
+        #222e14 50%,
+        #202c13 78%,
+        #1e2812 100%);
   }
   #floor { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
   #floor .leaf {
@@ -562,22 +557,22 @@
       const root = document.getElementById("floor");
       const W = window.innerWidth || 1920;
       const H = (window.innerHeight || 1080) * 0.56;
-      const sig = W + "x" + Math.round(H);
+      const sig = W + "x" + Math.round(H) + ":v2";
       if (root.dataset.sig === sig) return;
       root.dataset.sig = sig;
-      const rng = seedRng("floor:kpi-scene:v1");
+      const rng = seedRng("floor:kpi-scene:v2");
       let html = "";
-      for (let i = 0; i < 90; i++) {
+      for (let i = 0; i < 110; i++) {
         const x = rng() * 100;
-        const y = 18 + rng() * 80;
+        const y = 10 + rng() * 86;
         const rot = (rng() * 360).toFixed(1);
         const s = (0.7 + rng() * 1.6).toFixed(2);
         const c = LEAF_COLORS[Math.floor(rng() * LEAF_COLORS.length)];
         html += '<i class="leaf" style="left:' + x.toFixed(2) + "%;top:" + y.toFixed(2) + "%;background:" + c + ";transform:rotate(" + rot + "deg) scale(" + s + ')"></i>';
       }
-      for (let i = 0; i < 36; i++) {
+      for (let i = 0; i < 64; i++) {
         const x = rng() * 100;
-        const y = 8 + rng() * 50;
+        const y = 8 + rng() * 86;
         const rot = ((rng() - 0.5) * 50).toFixed(1);
         const s = (0.8 + rng() * 1.4).toFixed(2);
         html += '<i class="tuft" style="left:' + x.toFixed(2) + "%;top:" + y.toFixed(2) + "%;transform:rotate(" + rot + "deg) scale(" + s + ')"></i>';
