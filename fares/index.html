@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2a0f6e">
+<meta name="robots" content="noindex">
+<title>XR Hub · Fares</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&display=swap">
+<style>
+  :root {
+    --deep: #1c0a4d; --purple: #2a0f6e; --violet: #7a2bbf; --pink: #f04a9a; --yellow: #EAF04A;
+    --lilac: #c4a0ff; --card: rgba(28, 10, 77, 0.72); --line: rgba(255,255,255,0.14);
+    --muted: rgba(255,255,255,0.62);
+  }
+  * { box-sizing: border-box; }
+  html { margin: 0; background: #2a0f6e; }
+  body {
+    margin: 0; min-height: 100vh; min-height: 100dvh;
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Arabic", "Cairo", sans-serif;
+    color: #fff;
+    background: linear-gradient(170deg, #2a0f6e 0%, #4a1690 40%, #7a2bbf 80%, #b23f93 100%);
+  }
+  button, input { font: inherit; color: inherit; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 12px 14px calc(28px + env(safe-area-inset-bottom, 0px)); }
+  header { display: flex; align-items: center; gap: 10px; padding: 4px 2px 10px; flex-wrap: wrap; }
+  header h1 { font-size: 22px; margin: 0; font-weight: 800; letter-spacing: .01em; }
+  header h1 span { color: var(--yellow); }
+  .status { margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.1); color: var(--muted); white-space: nowrap; }
+  .status.ok { color: var(--yellow); }
+  .status.err { background: var(--pink); color: #fff; }
+  .lock { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--muted); cursor: pointer; text-decoration: none; display: inline-block; }
+  .hint { color: var(--muted); font-size: 14px; margin: 0 2px 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 16px; margin-bottom: 12px; box-shadow: 0 6px 24px rgba(10,0,40,.25); }
+  .banner { background: var(--pink); color: #fff; padding: 10px 14px; border-radius: 16px; margin-bottom: 12px; font-weight: 600; }
+
+  .day-bar {
+    position: sticky; top: 0; z-index: 8;
+    background: rgba(28, 10, 77, 0.94);
+    border-color: rgba(234,240,74,.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    margin-bottom: 12px;
+  }
+  .day-nav { display: flex; align-items: center; gap: 8px; }
+  .nav-btn {
+    width: 44px; height: 44px; flex: none; border: 1px solid var(--line);
+    border-radius: 50%; background: rgba(255,255,255,.08); color: #fff;
+    font-size: 22px; font-weight: 800; cursor: pointer; display: grid; place-items: center;
+    touch-action: manipulation;
+  }
+  .nav-btn:disabled { opacity: 0.35; cursor: default; }
+  .nav-btn:not(:disabled):active { transform: scale(0.96); }
+  .day-mid { flex: 1; text-align: center; min-width: 0; }
+  .day-mid .dow { color: var(--yellow); font-weight: 800; letter-spacing: .14em; text-transform: uppercase; font-size: 11px; }
+  .day-mid .date { font-weight: 800; font-size: 22px; line-height: 1.15; margin: 2px 0 0; }
+  .day-mid .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .picker-row { display: flex; justify-content: center; margin-top: 10px; }
+  .picker-row input[type=date] {
+    appearance: none; -webkit-appearance: none;
+    background: rgba(255,255,255,.08); border: 1px solid var(--line);
+    border-radius: 999px; padding: 6px 12px; color: #fff; font-weight: 700;
+    font-size: 14px; color-scheme: dark;
+  }
+  .chips {
+    display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    margin-top: 12px; padding: 2px 2px 6px; scrollbar-width: thin;
+  }
+  .chip {
+    flex: none; min-width: 40px; height: 40px; padding: 0 10px;
+    border-radius: 999px; border: 1px solid var(--line);
+    background: rgba(255,255,255,.08); color: #fff; font-weight: 800;
+    cursor: pointer; position: relative; touch-action: manipulation;
+  }
+  .chip.on { background: var(--yellow); color: var(--purple); border-color: var(--yellow); }
+  .chip.today:not(.on) { border-color: rgba(234,240,74,.7); }
+  .chip.has::after {
+    content: ""; position: absolute; left: 50%; bottom: 4px;
+    width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%;
+    background: var(--yellow);
+  }
+  .chip.on.has::after { background: var(--purple); }
+
+  .day-total { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+  .day-total .dt-label { flex: 1 1 100%; display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .day-total .dt-label .ar { font-family: Cairo, "Noto Sans Arabic", sans-serif; font-weight: 800; font-size: 18px; direction: rtl; color: var(--yellow); }
+  .day-total .dt-label .en { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .dt-stats { display: flex; gap: 10px; flex: 1 1 100%; }
+  .dt-stat { flex: 1; background: rgba(255,255,255,.07); border: 1px solid var(--line); border-radius: 16px; padding: 8px 12px; min-width: 0; }
+  .dt-stat .n { font-weight: 800; font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .dt-stat.p .n { color: var(--lilac); }
+  .dt-stat.e .n { color: var(--yellow); }
+  .dt-stat.c { flex: 1.35; background: rgba(234, 240, 74, 0.16); border-color: rgba(234, 240, 74, 0.55); }
+  .dt-stat.c .n { color: #fff; font-size: 34px; }
+  .dt-stat .lbl { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .dt-stat .lbl .ar { font-family: Cairo, "Noto Sans Arabic", sans-serif; font-weight: 800; font-size: 13px; direction: rtl; }
+  .dt-stat.p .lbl .ar, .dt-stat.p .lbl .en { color: var(--lilac); }
+  .dt-stat.e .lbl .ar, .dt-stat.e .lbl .en { color: var(--yellow); }
+  .dt-stat.c .lbl .ar, .dt-stat.c .lbl .en { color: #fff; }
+  .dt-stat .lbl .en { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+
+  .off-card { border-color: rgba(234,240,74,.4); }
+  .off-card .off-title { margin-bottom: 8px; display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .off-card .off-title .ar { font-family: Cairo, "Noto Sans Arabic", sans-serif; font-weight: 800; font-size: 18px; direction: rtl; color: var(--yellow); }
+  .off-card .off-title .en { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+  .off-people { display: flex; flex-wrap: wrap; gap: 8px; }
+  .off-chip { background: rgba(234,240,74,.16); border: 1px solid rgba(234,240,74,.4); color: var(--yellow); font-weight: 800; padding: 6px 12px; border-radius: 999px; }
+
+  .sess-card.counted { border-color: rgba(234,240,74,.45); }
+  .sess-card.empty { opacity: 0.92; }
+  .sess-top { display: flex; gap: 10px; align-items: flex-start; }
+  .num { width: 42px; height: 42px; border-radius: 50%; background: var(--yellow); color: var(--purple); font-weight: 900; display: grid; place-items: center; flex: none; font-size: 18px; }
+  .sess-card.counted .num { background: var(--lilac); color: var(--purple); }
+  .sess-card.empty .num { background: rgba(255,255,255,.14); color: #fff; }
+  .time { font-weight: 800; font-size: 18px; }
+  .time small { color: var(--muted); font-weight: 500; margin-left: 6px; white-space: nowrap; }
+  .who { color: var(--muted); font-size: 14px; margin-top: 3px; }
+  .who b { color: #fff; font-weight: 700; }
+  .who .swap { color: var(--yellow); font-weight: 700; }
+  .badge { margin-left: auto; flex: none; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; background: rgba(196,160,255,.22); color: #e4d0ff; }
+  .badge.wait { background: rgba(255,255,255,.1); color: var(--muted); }
+  .counts { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px; margin-top: 14px; }
+  .count { background: rgba(255,255,255,.07); border: 1px solid var(--line); border-radius: 16px; padding: 10px 10px 12px; text-align: center; }
+  .count.c { background: rgba(234, 240, 74, 0.14); border-color: rgba(234, 240, 74, 0.45); }
+  .count .n { font-weight: 800; font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; color: var(--lilac); }
+  .count.e .n { color: var(--yellow); }
+  .count.c .n { color: #fff; font-size: 32px; }
+  .count .n.miss { color: var(--muted); font-size: 22px; font-weight: 700; }
+  .count .lbl { display: flex; justify-content: center; align-items: baseline; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+  .count .lbl .ar { font-family: Cairo, "Noto Sans Arabic", sans-serif; font-weight: 800; font-size: 13px; direction: rtl; }
+  .count.p .lbl { color: var(--lilac); }
+  .count.e .lbl { color: var(--yellow); }
+  .count.c .lbl { color: #fff; }
+  .count .lbl .en { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .empty-msg { margin-top: 12px; color: var(--muted); font-weight: 600; text-align: center; padding: 10px 8px; border-radius: 14px; background: rgba(255,255,255,.05); }
+  .empty-msg .ar { font-family: Cairo, "Noto Sans Arabic", sans-serif; direction: rtl; font-weight: 800; display: block; }
+
+  @media (max-width: 620px) {
+    .wrap { padding: 10px 10px calc(24px + env(safe-area-inset-bottom, 0px)); }
+    .card { padding: 14px; border-radius: 18px; }
+    header h1 { font-size: 20px; }
+    .day-mid .date { font-size: 18px; }
+    .dt-stat .n { font-size: 24px; }
+    .dt-stat.c .n, .count.c .n { font-size: 28px; }
+    .counts { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .count { padding: 8px 6px 10px; }
+    .count .n { font-size: 24px; }
+  }
+  @media (min-width: 820px) {
+    .day-mid .date { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script src="../config.js"></script>
+<script>
+(function () {
+  "use strict";
+  const API = window.XR_API;
+  const SESS = window.XR_SESSIONS;
+  const FIRST = window.XR_FIRST_DAY || "2026-11-12";
+  const LAST = window.XR_LAST_DAY || "2026-11-30";
+  const app = document.getElementById("app");
+  const DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const dow = ymd => DOW[new Date(ymd + "T12:00:00Z").getUTCDay()];
+  const fmt12 = t => { let [h, m] = t.split(":").map(Number); const ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12; return h + ":" + String(m).padStart(2, "0") + " " + ap; };
+  const sessTime = i => fmt12(SESS[i][0]).replace(" PM", "") + "–" + fmt12(SESS[i][1]);
+  function todayRiyadh() {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  }
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  function clampCount(n) {
+    n = Math.round(Number(n));
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.min(9999, n);
+  }
+  function normalizeNumbers(raw) {
+    const out = {};
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+    for (const k of Object.keys(raw)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+      const day = raw[k];
+      if (!day || typeof day !== "object" || Array.isArray(day)) continue;
+      const sess = {};
+      for (const s of Object.keys(day)) {
+        if (!/^[1-8]$/.test(s)) continue;
+        const v = day[s];
+        if (!v || typeof v !== "object" || Array.isArray(v)) continue;
+        const rec = {};
+        if (Number.isFinite(Number(v.participants))) rec.participants = clampCount(v.participants);
+        if (Number.isFinite(Number(v.engagement))) rec.engagement = clampCount(v.engagement);
+        if ("participants" in rec || "engagement" in rec) sess[s] = rec;
+      }
+      if (Object.keys(sess).length) out[k] = sess;
+    }
+    return out;
+  }
+  function normalizeOffDays(raw) {
+    const out = {};
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+    for (const k of Object.keys(raw)) {
+      const list = raw[k];
+      if (!Array.isArray(list)) continue;
+      const seen = new Set(), names = [];
+      list.forEach(n => {
+        const name = String(n || "").trim();
+        if (name && !seen.has(name)) { seen.add(name); names.push(name); }
+      });
+      if (names.length) out[k] = names;
+    }
+    return out;
+  }
+  function normalize(d) {
+    d = d && typeof d === "object" ? d : {};
+    const known = { version: 1, teams: Array.isArray(d.teams) ? d.teams : [], daily: d.daily || {}, days: d.days || {}, swaps: d.swaps || {}, offDays: normalizeOffDays(d.offDays), numbers: normalizeNumbers(d.numbers), updatedAt: d.updatedAt || null };
+    for (const k of Object.keys(d)) if (!(k in known)) known[k] = d[k];
+    return known;
+  }
+  function eventDays() {
+    const out = [];
+    let d = FIRST;
+    while (d <= LAST) {
+      out.push(d);
+      const dt = new Date(d + "T12:00:00Z");
+      dt.setUTCDate(dt.getUTCDate() + 1);
+      d = dt.toISOString().slice(0, 10);
+    }
+    return out;
+  }
+  function shiftDay(ymd, delta) {
+    const dt = new Date(ymd + "T12:00:00Z");
+    dt.setUTCDate(dt.getUTCDate() + delta);
+    return dt.toISOString().slice(0, 10);
+  }
+  function fmtLong(ymd) {
+    const p = ymd.split("-");
+    const mon = ["January","February","March","April","May","June","July","August","September","October","November","December"][Number(p[1]) - 1];
+    return dow(ymd) + " " + Number(p[2]) + " " + mon + " " + p[0];
+  }
+  function parseDateParam() {
+    const q = new URLSearchParams(location.search).get("date");
+    if (q && /^\d{4}-\d{2}-\d{2}$/.test(q)) return q;
+    return null;
+  }
+  function clampToEvent(ymd) {
+    if (ymd < FIRST) return FIRST;
+    if (ymd > LAST) return LAST;
+    return ymd;
+  }
+
+  const DAYS = eventDays();
+  const today = todayRiyadh();
+  let data = null;
+  let selected = clampToEvent(parseDateParam() || today);
+  let statusText = "", statusCls = "";
+
+  function recOf(s) { return ((data && data.numbers) || {})[selected] && data.numbers[selected][String(s)] || null; }
+  function hasRec(s) {
+    const r = recOf(s);
+    return !!(r && (("participants" in r) || ("engagement" in r)));
+  }
+  function valOf(s, field) {
+    const r = recOf(s);
+    const n = r ? Number(r[field]) : NaN;
+    return Number.isFinite(n) ? n : null;
+  }
+  function dayTotals() {
+    let p = 0, e = 0, counted = 0;
+    SESS.forEach((_, i) => {
+      if (!hasRec(i + 1)) return;
+      counted++;
+      const pv = valOf(i + 1, "participants");
+      const ev = valOf(i + 1, "engagement");
+      p += pv == null ? 0 : pv;
+      e += ev == null ? 0 : ev;
+    });
+    return { p: p, e: e, t: p + e, counted: counted };
+  }
+  function offNames(ymd) { return ((data && data.offDays) || {})[ymd] || []; }
+  function dayHasCounts(ymd) { return !!Object.keys(((data && data.numbers) || {})[ymd] || {}).length; }
+
+  function setDate(ymd, push) {
+    ymd = clampToEvent(ymd);
+    if (ymd === selected && !push) {
+      render();
+      return;
+    }
+    selected = ymd;
+    const url = new URL(location.href);
+    if (ymd === today && !parseDateParam()) {
+      /* keep a clean URL when landing on today, but set param once the user picks a day */
+    }
+    url.searchParams.set("date", ymd);
+    const next = url.pathname + "?" + url.searchParams.toString() + url.hash;
+    if (push) history.pushState({ date: ymd }, "", next);
+    else history.replaceState({ date: ymd }, "", next);
+    render();
+    const on = app.querySelector(".chip.on");
+    if (on && on.scrollIntoView) on.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }
+
+  function peopleLine(people) {
+    return (people || []).map(p => {
+      if (!p || !p.name) return "";
+      if (p.swappedFrom) return esc(p.name) + ' <span class="swap">(for ' + esc(p.swappedFrom) + ")</span>";
+      return esc(p.name);
+    }).filter(Boolean).join(" · ");
+  }
+
+  function countCell(kind, ar, en, value) {
+    const shown = value == null ? "—" : String(value);
+    const miss = value == null ? " miss" : "";
+    return '<div class="count ' + kind + '"><div class="n' + miss + '">' + shown + '</div><div class="lbl"><span class="ar">' + ar + '</span><span class="en">' + en + "</span></div></div>";
+  }
+
+  function sessCard(i, pair) {
+    const s = i + 1;
+    const r = window.XR_resolve ? window.XR_resolve(data, selected, s) : { people: [], team: null };
+    const teamName = r.team && r.team.name ? r.team.name : "";
+    const names = peopleLine(r.people);
+    const who = names || (teamName ? esc(teamName) : "No team assigned");
+    const counted = hasRec(s);
+    const p = valOf(s, "participants");
+    const e = valOf(s, "engagement");
+    const tot = counted ? (p == null ? 0 : p) + (e == null ? 0 : e) : null;
+    let body;
+    if (counted) {
+      body = '<div class="counts">' +
+        countCell("p", "المشاركون", "Participants", p) +
+        countCell("e", "التفاعل", "Engagement", e) +
+        countCell("c", "المجموع", "Combined", tot) +
+        "</div>";
+    } else {
+      body = '<div class="empty-msg"><span class="ar">لم تُحسب بعد</span>Not yet counted</div>';
+    }
+    return '<div class="card sess-card ' + (counted ? "counted" : "empty") + '" data-s="' + s + '">' +
+      '<div class="sess-top">' +
+        '<div class="num">' + s + "</div>" +
+        "<div>" +
+          '<div class="time">' + sessTime(i) + " <small>" + pair[0] + "–" + pair[1] + "</small></div>" +
+          '<div class="who">' + (teamName ? "<b>" + esc(teamName) + "</b> · " : "") + who + "</div>" +
+        "</div>" +
+        '<div class="badge' + (counted ? "" : " wait") + '">' + (counted ? "Counted" : "Not yet") + "</div>" +
+      "</div>" + body + "</div>";
+  }
+
+  function render() {
+    const sy = window.scrollY;
+    const inRange = FIRST <= selected && selected <= LAST;
+    const t = dayTotals();
+    const off = offNames(selected);
+    const isToday = selected === today;
+    const prev = shiftDay(selected, -1);
+    const next = shiftDay(selected, 1);
+    const chips = DAYS.map(d => {
+      const on = d === selected ? " on" : "";
+      const td = d === today ? " today" : "";
+      const has = dayHasCounts(d) ? " has" : "";
+      return '<button type="button" class="chip' + on + td + has + '" data-date="' + d + '" aria-label="' + esc(fmtLong(d)) + '">' + Number(d.slice(8)) + "</button>";
+    }).join("");
+
+    let body;
+    if (!inRange) {
+      body = '<div class="card"><div class="hint">This date is outside the event (' + esc(FIRST) + " – " + esc(LAST) + ").</div></div>";
+    } else {
+      body =
+        '<div class="card day-total" id="dayTotal">' +
+          '<div class="dt-label"><div class="ar">مجموع اليوم</div><div class="en">Daily total</div></div>' +
+          '<div class="dt-stats">' +
+            '<div class="dt-stat p"><div class="n">' + t.p + '</div><div class="lbl"><span class="ar">المشاركون</span><span class="en">Participants</span></div></div>' +
+            '<div class="dt-stat e"><div class="n">' + t.e + '</div><div class="lbl"><span class="ar">التفاعل</span><span class="en">Engagement</span></div></div>' +
+            '<div class="dt-stat c"><div class="n">' + t.t + '</div><div class="lbl"><span class="ar">المجموع الكلي</span><span class="en">Total</span></div></div>' +
+          "</div></div>" +
+        (off.length
+          ? '<div class="card off-card"><div class="off-title"><div class="ar">إجازة اليوم</div><div class="en">Off today</div></div><div class="off-people">' +
+            off.map(n => '<span class="off-chip">' + esc(n) + "</span>").join("") +
+            "</div></div>"
+          : "") +
+        SESS.map((pair, i) => sessCard(i, pair)).join("");
+    }
+
+    app.innerHTML =
+      "<header><h1>XR Hub <span>Fares</span></h1>" +
+        '<div class="status ' + statusCls + '" id="status">' + esc(statusText) + "</div>" +
+        '<a class="lock" href="../clicker/">Clicker</a>' +
+        '<a class="lock" href="../kpi/">KPI</a></header>' +
+      '<div class="hint">Read-only session numbers for the collector. Switch days to review counts. Nothing is edited here.</div>' +
+      '<div class="card day-bar">' +
+        '<div class="day-nav">' +
+          '<button type="button" class="nav-btn" id="prevDay" aria-label="Previous day"' + (prev < FIRST ? " disabled" : "") + ">‹</button>" +
+          '<div class="day-mid">' +
+            '<div class="dow">' + (isToday ? "Today · Asia/Riyadh" : "Asia/Riyadh") + "</div>" +
+            '<div class="date">' + esc(fmtLong(selected)) + "</div>" +
+            (inRange ? '<div class="sub">' + t.counted + " of " + SESS.length + " sessions counted</div>" : "") +
+          "</div>" +
+          '<button type="button" class="nav-btn" id="nextDay" aria-label="Next day"' + (next > LAST ? " disabled" : "") + ">›</button>" +
+        "</div>" +
+        '<div class="picker-row"><input type="date" id="datePick" value="' + selected + '" min="' + FIRST + '" max="' + LAST + '" aria-label="Choose a date"></div>' +
+        '<div class="chips" id="chips">' + chips + "</div>" +
+      "</div>" + body;
+
+    window.scrollTo(0, sy);
+    const prevBtn = document.getElementById("prevDay");
+    const nextBtn = document.getElementById("nextDay");
+    if (prevBtn) prevBtn.onclick = () => { if (prev >= FIRST) setDate(prev, true); };
+    if (nextBtn) nextBtn.onclick = () => { if (next <= LAST) setDate(next, true); };
+    const pick = document.getElementById("datePick");
+    if (pick) pick.onchange = () => { if (pick.value) setDate(pick.value, true); };
+    app.querySelectorAll(".chip").forEach(b => { b.onclick = () => setDate(b.dataset.date, true); });
+    const on = app.querySelector(".chip.on");
+    if (on && on.scrollIntoView) on.scrollIntoView({ inline: "center", block: "nearest" });
+  }
+
+  async function start() {
+    if (!API) { app.innerHTML = '<div class="banner">The storage server address isn\'t set in config.js yet.</div>'; return; }
+    try {
+      const res = await fetch(API + "/data", { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      data = normalize(await res.json());
+      statusText = data.updatedAt ? "Synced" : "Ready";
+      statusCls = "ok";
+    } catch (e) {
+      app.innerHTML = '<div class="banner">Can\'t load data from the server. Pull to refresh or try again shortly.</div>';
+      return;
+    }
+    if (!parseDateParam()) history.replaceState({ date: selected }, "", location.pathname + "?date=" + selected + location.hash);
+    render();
+  }
+
+  window.addEventListener("popstate", () => {
+    selected = clampToEvent((history.state && history.state.date) || parseDateParam() || today);
+    if (data) render();
+  });
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState !== "visible" || !data) return;
+    try {
+      const res = await fetch(API + "/data", { cache: "no-store" });
+      if (!res.ok) return;
+      data = normalize(await res.json());
+      statusText = "Synced"; statusCls = "ok";
+      render();
+    } catch (e) {}
+  });
+  start();
+})();
+</script>
+</body>
+</html>

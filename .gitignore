@@ -4,6 +4,9 @@ shot-*.png
 *-preview-*.png
 test-*.png
 live-*.png
+preview-*.png
+building-ref-*.png
+stack-ref.png
 worker/.dev.vars
 worker/.wrangler/
 worker/node_modules/

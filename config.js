@@ -1,4 +1,4 @@
-/* Shared settings for /in, /admin, /clicker and /kpi.
+/* Shared settings for /in, /admin, /clicker, /kpi and /fares.
    XR_API is the Cloudflare Worker that stores teams and assignments.
    Set it to the deployed workers.dev URL, e.g. https://xr-admin-api.<subdomain>.workers.dev */
 (function () {
