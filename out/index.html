@@ -122,13 +122,20 @@
       0%, 100% { box-shadow: 0 0 1vmin #EAF04A, 0 0 2.5vmin rgba(234,240,74,0.45), inset 0 0 1vmin rgba(234,240,74,0.25); }
       50% { box-shadow: 0 0 1.8vmin #EAF04A, 0 0 5vmin rgba(234,240,74,0.7), inset 0 0 2vmin rgba(234,240,74,0.45); }
     }
+    .done {
+      position: absolute;
+      border-radius: 999px;
+      background: rgba(70, 64, 92, 0.62);
+      -webkit-backdrop-filter: grayscale(1) brightness(0.8);
+      backdrop-filter: grayscale(1) brightness(0.8);
+    }
   </style>
 </head>
 <body>
   <div id="image-stage">
     <img class="blur" src="../poster.png" alt="" aria-hidden="true">
     <img id="poster" src="../poster.png" alt="XR Hub daily schedule">
-    <div id="poster-box"><div id="hl-layer"></div></div>
+    <div id="poster-box"><div id="done-layer"></div><div id="hl-layer"></div></div>
   </div>
   <div id="video-stage" class="hidden">
     <div id="player"></div>
@@ -283,6 +290,7 @@
       ];
       const box = document.getElementById("poster-box");
       const posterImg = document.getElementById("poster");
+      const doneLayer = document.getElementById("done-layer");
       const toMin = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 
       function riyadhNow() {
@@ -318,7 +326,27 @@
         }
         const hlLayer = document.getElementById("hl-layer");
         hlLayer.innerHTML = "";
+        renderDone(now);
         // The NOW/NEXT outline was removed; this only clears the layer.
+      }
+
+      const inEvent = ymd => ymd >= "2026-11-12" && ymd <= "2026-11-30";
+      const pct = (v, total) => (v / total * 100) + "%";
+      function place(el, i, x, y, w, h) {
+        const [left, top] = pillBox(i);
+        el.style.left = pct(left + x, IMG_W); el.style.top = pct(top + y, IMG_H);
+        el.style.width = pct(w, IMG_W); el.style.height = pct(h, IMG_H);
+      }
+      function renderDone(now) {
+        doneLayer.innerHTML = "";
+        if (!inEvent(now.ymd)) return;
+        SESSIONS.forEach(([, b], i) => {
+          if (now.mins < toMin(b)) return;
+          const el = document.createElement("div");
+          el.className = "done";
+          place(el, i, 0, 0, PILL_W, PILL_H);
+          doneLayer.appendChild(el);
+        });
       }
 
       window.addEventListener("resize", layoutBox);
