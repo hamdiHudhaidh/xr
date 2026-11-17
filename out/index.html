@@ -61,8 +61,7 @@
       z-index: 2;
     }
     /* 16:9 video cover-fills the viewport in any orientation. */
-    #player,
-    #player iframe {
+    #out-video {
       position: absolute;
       top: 50%;
       left: 50%;
@@ -71,6 +70,7 @@
       transform: translate(-50%, -50%);
       border: 0;
       pointer-events: none;
+      object-fit: cover;
     }
     .hidden { display: none !important; }
     #hint {
@@ -138,23 +138,21 @@
     <div id="poster-box"><div id="done-layer"></div><div id="hl-layer"></div></div>
   </div>
   <div id="video-stage" class="hidden">
-    <div id="player"></div>
+    <video id="out-video" src="../assets/out-video.mp4" muted playsinline webkit-playsinline preload="auto"></video>
   </div>
   <div id="hint">Tap for fullscreen &amp; sound</div>
   <script src="../poster-date.js"></script>
 
   <script>
     (function () {
-      const VIDEO_ID = "0bbAwABTzNQ";
       const DEFAULT_IMG_SECONDS = 60;
       const ERROR_FALLBACK_MS = 4000;
 
       const imageStage = document.getElementById("image-stage");
       const videoStage = document.getElementById("video-stage");
       const hint = document.getElementById("hint");
+      const player = document.getElementById("out-video");
 
-      let player = null;
-      let unmuted = false;
       let phase = "image";
       let imgTimer = null;
       let errorTimer = null;
@@ -176,14 +174,12 @@
         clearTimers();
         imageStage.classList.remove("hidden");
         videoStage.classList.add("hidden");
-        if (player && typeof player.pauseVideo === "function") {
-          try { player.pauseVideo(); } catch (e) {}
-        }
+        try { player.pause(); } catch (e) {}
         imgTimer = setTimeout(startVideoPhase, imgSeconds() * 1000);
       }
 
       function startVideoPhase() {
-        if (!ready || !player || typeof player.playVideo !== "function") {
+        if (!ready) {
           imgTimer = setTimeout(startVideoPhase, 1500);
           return;
         }
@@ -193,13 +189,14 @@
         imageStage.classList.add("hidden");
         videoStage.classList.remove("hidden");
         try {
-          if (typeof player.seekTo === "function") player.seekTo(0, true);
-          if (unmuted) {
-            player.unMute();
-          } else {
-            player.mute();
+          player.muted = true;
+          player.currentTime = 0;
+          const playPromise = player.play();
+          if (playPromise && typeof playPromise.catch === "function") {
+            playPromise.catch(function () {
+              errorTimer = setTimeout(startImagePhase, ERROR_FALLBACK_MS);
+            });
           }
-          player.playVideo();
         } catch (e) {
           errorTimer = setTimeout(startImagePhase, ERROR_FALLBACK_MS);
         }
@@ -207,45 +204,18 @@
 
       function onPlayerReady() {
         ready = true;
-        try { player.mute(); } catch (e) {}
       }
 
-      function onStateChange(event) {
-        if (!window.YT) return;
-        if (phase === "video" && event.data === YT.PlayerState.ENDED) {
-          startImagePhase();
-        }
-      }
-
-      function onPlayerError() {
+      player.addEventListener("loadeddata", onPlayerReady);
+      player.addEventListener("canplay", onPlayerReady);
+      if (player.readyState >= 2) onPlayerReady();
+      player.addEventListener("ended", function () {
+        if (phase === "video") startImagePhase();
+      });
+      player.addEventListener("error", function () {
         if (phase !== "video") return;
         errorTimer = setTimeout(startImagePhase, ERROR_FALLBACK_MS);
-      }
-
-      window.onYouTubeIframeAPIReady = function () {
-        player = new YT.Player("player", {
-          videoId: VIDEO_ID,
-          host: "https://www.youtube.com",
-          playerVars: {
-            autoplay: 0,
-            mute: 1,
-            controls: 0,
-            rel: 0,
-            playsinline: 1,
-            modestbranding: 1,
-            fs: 0,
-            disablekb: 1,
-            iv_load_policy: 3,
-            cc_load_policy: 0,
-            origin: location.origin
-          },
-          events: {
-            onReady: onPlayerReady,
-            onStateChange: onStateChange,
-            onError: onPlayerError
-          }
-        });
-      };
+      });
 
       async function unlock() {
         hint.classList.add("fade");
@@ -254,13 +224,6 @@
             await document.documentElement.requestFullscreen();
           }
         } catch (e) {}
-        unmuted = true;
-        if (player) {
-          try {
-            player.unMute();
-            if (typeof player.setVolume === "function") player.setVolume(100);
-          } catch (e) {}
-        }
       }
 
       document.addEventListener("click", unlock);
@@ -270,11 +233,6 @@
       });
 
       setTimeout(function () { hint.classList.add("fade"); }, 8000);
-
-      // Load the IFrame Player API.
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      document.head.appendChild(tag);
 
 
       // ---- Current-session highlight (times in Asia/Riyadh) ----
