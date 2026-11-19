@@ -330,8 +330,18 @@
       color: #7a2bbf;
       opacity: 0.88;
     }
-    #off-layer { overflow: visible; }
-    #off-panel {
+    .member.vacant .av.empty-slot {
+      box-sizing: border-box;
+      border: 0.16vmin dashed rgba(255,255,255,0.5);
+      background: rgba(20, 10, 50, 0.35);
+      border-radius: 50%;
+      filter: none;
+      animation: none;
+      transform: none;
+    }
+    .member.vacant .av-name { color: rgba(255,255,255,0.45); }
+    #off-layer, #ct-layer { overflow: visible; }
+    #off-panel, #ct-panel {
       position: absolute;
       display: flex;
       flex-direction: column;
@@ -340,7 +350,7 @@
       overflow: visible;
       pointer-events: none;
     }
-    #off-panel .off-bg {
+    #off-panel, #ct-panel .off-bg {
       position: absolute;
       inset: 0;
       z-index: 0;
@@ -350,7 +360,7 @@
       border-radius: 2.4vmin;
       box-shadow: 0 0.2vmin 0.8vmin rgba(10, 0, 40, 0.35);
     }
-    #off-panel .off-title {
+    #off-panel, #ct-panel .off-title {
       position: relative;
       z-index: 1;
       text-align: center;
@@ -359,18 +369,18 @@
       font-family: Cairo, "Noto Sans Arabic", "Segoe UI", system-ui, sans-serif;
       color: #EAF04A;
     }
-    #off-panel .off-title .ar {
+    #off-panel, #ct-panel .off-title .ar {
       font-weight: 800;
       direction: rtl;
       line-height: 1.15;
     }
-    #off-panel .off-title .en {
+    #off-panel, #ct-panel .off-title .en {
       font-weight: 700;
       letter-spacing: 0.14em;
       line-height: 1.2;
       margin-top: 0.12em;
     }
-    #off-panel .off-people {
+    #off-panel, #ct-panel .off-people {
       position: relative;
       z-index: 1;
       display: flex;
@@ -388,7 +398,7 @@
   <div id="image-stage">
     <img class="blur" src="../poster.png" alt="" aria-hidden="true">
     <img id="poster" src="../poster.png" alt="XR Hub daily schedule">
-    <div id="poster-box"><div id="team-layer"></div><div id="off-layer"></div><div id="done-layer"></div><div id="hl-layer"></div></div>
+    <div id="poster-box"><div id="team-layer"></div><div id="ct-layer"></div><div id="off-layer"></div><div id="done-layer"></div><div id="hl-layer"></div></div>
   </div>
   <div id="kpi-stage">
     <iframe id="kpiFrame" src="../kpi/?embed=1" title="KPI" allow="autoplay"></iframe>
@@ -627,6 +637,7 @@
         hlLayer.innerHTML = "";
         renderDone(now);
         renderTeams(now);
+        renderCreative(now);
         renderOff(now);
         // The NOW/NEXT outline was removed; this only clears the layer.
       }
@@ -767,6 +778,25 @@
         parent.appendChild(cell);
         return nm;
       }
+      function appendVacant(parent, j, avW, avH, namePx, nameGap) {
+        const cell = document.createElement("div");
+        cell.className = "member vacant";
+        cell.style.width = avW.toFixed(2) + "px";
+        const av = document.createElement("div");
+        av.className = "av empty-slot";
+        av.style.width = avW.toFixed(2) + "px";
+        av.style.height = avH.toFixed(2) + "px";
+        av.title = "Empty slot";
+        const nm = document.createElement("div");
+        nm.className = "av-name";
+        nm.textContent = "";
+        nm.style.marginTop = nameGap.toFixed(2) + "px";
+        nm.style.fontSize = namePx.toFixed(2) + "px";
+        cell.appendChild(av);
+        cell.appendChild(nm);
+        parent.appendChild(cell);
+        return nm;
+      }
       function fitNames(root, namePx) {
         root.querySelectorAll(".av-name").forEach(nm => {
           let fs = namePx;
@@ -784,7 +814,7 @@
         const NUMS_H = 38;
         SESSIONS.forEach(([, b], i) => {
           const r = window.XR_resolve(teamData, now.ymd, i + 1);
-          const people = (r.people || []).filter(x => x && x.name);
+          const people = (r.people || []).filter(x => x && (x.name || x.vacant));
           if (!people.length) return;
           const past = now.mins >= toMin(b);
           const hasNums = past && !!sessionNums(now.ymd, i + 1);
@@ -805,21 +835,22 @@
           const avH = Math.max(avW * 1.05, availH - namePx * 1.15 - nameGap);
           el.style.gap = (gap * unit) + "px";
           el.style.padding = (padY * unit) + "px " + (padX * unit) + "px";
-          people.forEach((p, j) => appendMember(el, p.name, j, avW, avH, namePx, nameGap));
+          people.forEach((p, j) => {
+            if (p.vacant || !p.name) appendVacant(el, j, avW, avH, namePx, nameGap);
+            else appendMember(el, p.name, j, avW, avH, namePx, nameGap);
+          });
           teamLayer.appendChild(el);
           fitNames(el, namePx);
         });
       }
-      function renderOff(now) {
-        offLayer.innerHTML = "";
-        const names = offNames(now.ymd);
+      function renderSidePanel(layer, id, left, titleAr, titleEn, names) {
+        layer.innerHTML = "";
         if (!names.length) return;
         const unit = box.clientHeight / IMG_H;
-        // Sit in the right margin, aligned with the 4 schedule rows (poster px).
-        const LEFT = 1652, TOP = 494, WIDTH = 248, HEIGHT = 424;
+        const TOP = 494, WIDTH = 248, HEIGHT = 424;
         const panel = document.createElement("div");
-        panel.id = "off-panel";
-        panel.style.left = pct(LEFT, IMG_W);
+        panel.id = id;
+        panel.style.left = pct(left, IMG_W);
         panel.style.top = pct(TOP, IMG_H);
         panel.style.width = pct(WIDTH, IMG_W);
         panel.style.height = pct(HEIGHT, IMG_H);
@@ -832,11 +863,11 @@
         title.style.padding = (padTop * unit) + "px " + (padX * unit) + "px 0";
         const ar = document.createElement("div");
         ar.className = "ar";
-        ar.textContent = "إجازة اليوم";
+        ar.textContent = titleAr;
         ar.style.fontSize = Math.max(15, 20 * unit).toFixed(2) + "px";
         const en = document.createElement("div");
         en.className = "en";
-        en.textContent = "OFF TODAY";
+        en.textContent = titleEn;
         en.style.fontSize = Math.max(9, 11 * unit).toFixed(2) + "px";
         title.appendChild(ar);
         title.appendChild(en);
@@ -849,7 +880,7 @@
         const gap = n <= 2 ? 10 : n <= 4 ? 8 : 6;
         const innerW = WIDTH - padX * 2;
         const colW = (innerW - gap * (cols - 1)) / cols;
-        const titleH = 12 + 20 + 4 + 11; // padding + ar + gap + en, poster px
+        const titleH = 12 + 20 + 4 + 11;
         const innerH = HEIGHT - titleH - 10;
         const rowH = (innerH - gap * (rows - 1)) / rows;
         const namePx = Math.max(9, 11 * unit);
@@ -860,20 +891,46 @@
         peopleEl.style.padding = "4px " + (padX * unit) + "px 10px";
         names.forEach((name, j) => appendMember(peopleEl, name, j, avW, avH, namePx, nameGap));
         panel.appendChild(peopleEl);
-        offLayer.appendChild(panel);
+        layer.appendChild(panel);
         fitNames(peopleEl, namePx);
+      }
+      function renderCreative(now) {
+        const ctLayer = document.getElementById("ct-layer");
+        const name = window.XR_creativeTech ? window.XR_creativeTech(teamData, now.ymd) : "";
+        // Sit in the left margin, mirroring OFF TODAY on the right (poster px).
+        renderSidePanel(ctLayer, "ct-panel", 20, "التقني الإبداعي", "CREATIVE TECH", name ? [name] : []);
+      }
+      function renderOff(now) {
+        // Sit in the right margin, aligned with the 4 schedule rows (poster px).
+        renderSidePanel(offLayer, "off-panel", 1652, "إجازة اليوم", "OFF TODAY", offNames(now.ymd));
+      }
+      let loadRetry = 0;
+      let loadTimer = null;
+      async function fetchJson(url) {
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error(String(res.status));
+        return res.json();
       }
       async function loadTeams() {
         if (!window.XR_API) return;
         try {
-          const [dRes, aRes] = await Promise.all([
-            fetch(window.XR_API + "/data", { cache: "no-store" }),
-            fetch(window.XR_API + "/avatars", { cache: "no-store" })
-          ]);
-          if (!dRes.ok) throw new Error(dRes.status);
-          teamData = await dRes.json();
-          avatars = (aRes.ok ? await aRes.json() : {}) || {};
-        } catch (e) { teamData = null; avatars = {}; }
+          const dataP = fetchJson(window.XR_API + "/data").then(j => {
+            if (j && typeof j === "object" && !Array.isArray(j)) teamData = j;
+          });
+          const avP = fetchJson(window.XR_API + "/avatars").then(j => {
+            if (j && typeof j === "object" && !Array.isArray(j)) avatars = j;
+          }).catch(function () { /* keep last avatars */ });
+          await dataP;
+          await avP;
+          loadRetry = 0;
+        } catch (e) {
+          /* Keep the last good schedule so a failed refresh does not blank /in. */
+          loadRetry += 1;
+          if (loadRetry <= 4) {
+            if (loadTimer) clearTimeout(loadTimer);
+            loadTimer = setTimeout(loadTeams, 1500 * loadRetry);
+          }
+        }
         updateHighlight();
       }
       window.addEventListener("resize", () => { layoutBox(); updateHighlight(); });

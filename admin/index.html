@@ -22,7 +22,7 @@
     background: linear-gradient(170deg, #2a0f6e 0%, #4a1690 40%, #7a2bbf 80%, #b23f93 100%);
   }
   button, input, select { font: inherit; color: inherit; }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 14px 14px 90px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 14px 14px 90px; }
   header { display: flex; align-items: center; gap: 10px; padding: 6px 2px 12px; }
   header h1 { font-size: 20px; margin: 0; font-weight: 800; letter-spacing: .01em; }
   header h1 span { color: var(--yellow); }
@@ -32,7 +32,7 @@
   .lock { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--muted); cursor: pointer; }
   a.lock { text-decoration: none; display: inline-block; }
   nav.tabs { display: flex; gap: 6px; background: rgba(0,0,0,.18); padding: 5px; border-radius: 999px; position: sticky; top: 8px; z-index: 5; backdrop-filter: blur(8px); }
-  nav.tabs button { flex: 1; border: 0; background: none; padding: 9px 6px; border-radius: 999px; font-weight: 700; cursor: pointer; color: var(--muted); }
+  nav.tabs button { flex: 1 1 18%; min-width: 72px; border: 0; background: none; padding: 9px 6px; border-radius: 999px; font-weight: 700; cursor: pointer; color: var(--muted); }
   nav.tabs button.on { background: var(--yellow); color: var(--purple); }
   section { display: none; margin-top: 14px; }
   section.on { display: block; }
@@ -194,6 +194,31 @@
   .dt-stat .lbl .en { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
   @media (max-width: 620px) { .counters { grid-template-columns: 1fr; } .step button { width: 64px; height: 64px; } }
 
+
+  .sched-layout { display: grid; grid-template-columns: 260px 1fr; gap: 12px; align-items: start; }
+  @media (max-width: 860px) { .sched-layout { grid-template-columns: 1fr; } }
+  .person.vacant { background: rgba(255,255,255,.04); border: 1px dashed rgba(255,255,255,.35); }
+  .person.vacant .nm { color: var(--muted); font-style: italic; font-weight: 500; }
+  .person .was { color: var(--muted); font-size: 12px; margin-right: 6px; }
+  .ct-chip.on { background: var(--yellow); color: var(--purple); border-color: var(--yellow); }
+  .ct-chip:disabled { opacity: .4; cursor: not-allowed; }
+  .off-grid-wrap { overflow: auto; -webkit-overflow-scrolling: touch; border-radius: 16px; }
+  table.off-grid { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; }
+  table.off-grid th, table.off-grid td { border-bottom: 1px solid var(--line); border-right: 1px solid rgba(255,255,255,.06); padding: 0; text-align: center; }
+  table.off-grid th { font-size: 11px; font-weight: 700; color: var(--muted); padding: 8px 4px; position: sticky; top: 0; background: rgba(28,10,77,.96); z-index: 2; }
+  table.off-grid th.today { color: var(--yellow); }
+  table.off-grid th.name, table.off-grid td.name {
+    position: sticky; left: 0; z-index: 3; text-align: left; padding: 6px 12px; min-width: 140px;
+    background: rgba(28,10,77,.96); font-weight: 700; white-space: nowrap;
+  }
+  table.off-grid th.name { z-index: 4; }
+  table.off-grid tr.team-row td { background: rgba(234,240,74,.1); color: var(--yellow); font-weight: 800; font-size: 12px; letter-spacing: .04em; text-align: left; padding: 8px 12px; position: sticky; left: 0; }
+  table.off-grid button.off-cell {
+    width: 44px; height: 36px; border: 0; background: transparent; color: transparent; cursor: pointer; border-radius: 8px; font-weight: 800;
+  }
+  table.off-grid button.off-cell.on { background: var(--yellow); color: var(--purple); }
+  table.off-grid td.today { background: rgba(234,240,74,.06); }
+  table.off-grid caption { caption-side: top; text-align: left; color: var(--muted); font-size: 13px; padding: 0 0 10px; }
   @media (max-width: 520px) { .wrap { padding: 10px 10px 80px; } .card { padding: 12px; border-radius: 18px; } }
 </style>
 </head>
@@ -260,6 +285,16 @@
     }
     return out;
   }
+  function normalizeCreativeTech(raw) {
+    const out = {};
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+    for (const k of Object.keys(raw)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+      const name = String(raw[k] || "").trim();
+      if (name && name.length <= 80) out[k] = name;
+    }
+    return out;
+  }
   function normalizeOffDays(raw) {
     const out = {};
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
@@ -280,7 +315,7 @@
   }
   function normalize(d) {
     d = d && typeof d === "object" ? d : {};
-    const known = { version: 1, teams: Array.isArray(d.teams) ? d.teams : [], daily: d.daily || {}, days: d.days || {}, swaps: d.swaps || {}, offDays: normalizeOffDays(d.offDays), numbers: normalizeNumbers(d.numbers), updatedAt: d.updatedAt || null };
+    const known = { version: 2, teams: Array.isArray(d.teams) ? d.teams : [], daily: d.daily || {}, days: d.days || {}, swaps: d.swaps || {}, offDays: normalizeOffDays(d.offDays), creativeTech: normalizeCreativeTech(d.creativeTech), numbers: normalizeNumbers(d.numbers), updatedAt: d.updatedAt || null };
     for (const k of Object.keys(d)) if (!(k in known)) known[k] = d[k];
     return known;
   }
@@ -516,18 +551,39 @@
   function teamOptions(sel) {
     return `<option value="">— No team —</option>` + data.teams.map(t => `<option value="${esc(t.id)}" ${t.id === sel ? "selected" : ""}>${esc(t.name)}</option>`).join("");
   }
-  function rosterNames(except) {
+  function rosterNames(except, ymd) {
     const seen = new Set(), names = [];
     (data.teams || []).forEach(team => (team.people || []).forEach(p => {
       const name = String(p || "").trim();
       if (!name || name === except || seen.has(name)) return;
+      if (ymd && window.XR_isOff && window.XR_isOff(data, ymd, name)) return;
       seen.add(name);
       names.push(name);
     }));
     return names;
   }
-  function swapOptions(from) {
-    return `<option value="">No swap</option>` + rosterNames(from).map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
+  function swapOptions(from, ymd) {
+    return `<option value="">No swap</option>` + rosterNames(from, ymd).map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
+  }
+  function setPersonOff(day, name, on) {
+    const cur = new Set(data.offDays[day] || []);
+    if (on) cur.add(name); else cur.delete(name);
+    if (cur.size) data.offDays[day] = [...cur];
+    else delete data.offDays[day];
+    if (on) {
+      if (data.creativeTech && data.creativeTech[day] === name) delete data.creativeTech[day];
+      for (const k of Object.keys(data.swaps || {})) {
+        if (!k.startsWith(day + "|")) continue;
+        data.swaps[k] = (data.swaps[k] || []).filter(w => w.to !== name);
+        if (!data.swaps[k].length) delete data.swaps[k];
+      }
+    }
+  }
+  function setCreative(day, name) {
+    data.creativeTech = data.creativeTech || {};
+    if (!name || data.creativeTech[day] === name) delete data.creativeTech[day];
+    else data.creativeTech[day] = name;
+    if (!Object.keys(data.creativeTech).length) data.creativeTech = {};
   }
   function cleanSwaps(ymd, s) { delete data.swaps[ymd + "|" + s]; }
 
@@ -541,10 +597,11 @@
         <a class="lock" href="../kpi/">KPI</a>
         <button class="lock" id="lockBtn" title="Forget passcode on this device">Lock</button></header>
       <nav class="tabs">
-        ${[["teams", "Teams"], ["sessions", "Sessions"], ["numbers", "Numbers"]].map(([k, l]) => `<button data-tab="${k}" class="${ui.tab === k ? "on" : ""}">${l}</button>`).join("")}
+        ${[["teams", "Teams"], ["sessions", "Sessions"], ["offdays", "Off days"], ["numbers", "Numbers"]].map(([k, l]) => `<button data-tab="${k}" class="${ui.tab === k ? "on" : ""}">${l}</button>`).join("")}
       </nav>
       <section class="${ui.tab === "teams" ? "on" : ""}">${renderTeams()}</section>
       <section class="${ui.tab === "sessions" ? "on" : ""}">${renderSessions()}</section>
+      <section class="${ui.tab === "offdays" ? "on" : ""}">${renderOffDays()}</section>
       <section class="${ui.tab === "numbers" ? "on" : ""}">${renderNumbers()}</section>`;
     bind();
     window.scrollTo(0, sy);
@@ -556,8 +613,11 @@
     if (!on) return;
     const scroller = on.closest(".days");
     if (!scroller) return;
-    const left = on.offsetLeft - (scroller.clientWidth - on.offsetWidth) / 2;
-    scroller.scrollLeft = Math.max(0, Math.min(left, scroller.scrollWidth - scroller.clientWidth));
+    const left = on.offsetLeft, right = left + on.offsetWidth;
+    const viewL = scroller.scrollLeft, viewR = viewL + scroller.clientWidth;
+    if (left >= viewL + 8 && right <= viewR - 8) return;
+    const target = left - (scroller.clientWidth - on.offsetWidth) / 2;
+    scroller.scrollLeft = Math.max(0, Math.min(target, scroller.scrollWidth - scroller.clientWidth));
   }
 
   function renderTeams() {
@@ -575,7 +635,7 @@
           </div>`).join("") : `<span class="empty">No people yet</span>`}</div>
         <form class="row addp"><input type="text" placeholder="Add a person's name, then add their photo" aria-label="Person name"><button class="btn small">Add</button></form>
       </div>`).join("");
-    return `<div class="hint">These are the base teams. Add a name, then add their photo — it appears on the /in schedule in place of the name. Swaps you make on a single session never change the base team.</div>
+    return `<div class="hint">Create your teams here, then assign them to sessions on the Sessions tab. Add a name, then add their photo — it appears on the /in schedule in place of the name. The creative technologist is marked per day on Sessions. Off days are set for the whole event on the Off days tab. Swaps you make on a single session never change the base team.</div>
       <input id="avatarFile" type="file" accept="image/*">
       <form class="card row" id="newTeam"><input type="text" placeholder="New team name, e.g. Team A" aria-label="New team name"><button class="btn">+ Team</button></form>
       ${cards || `<div class="card empty">No teams yet. Create one above.</div>`}`;
@@ -585,7 +645,7 @@
     return `<div class="days" id="${id}">
       ${withDefault ? `<button class="def ${cur === "default" ? "on" : ""}" data-day="default"><b>Every day</b><small>default</small></button>` : ""}
       ${DATES.map(d => {
-        const has = withDefault && (Object.keys(data.days[d] || {}).length || Object.keys(data.swaps).some(k => k.startsWith(d + "|") && data.swaps[k].length) || (data.offDays[d] || []).length);
+        const has = withDefault && (Object.keys(data.days[d] || {}).length || Object.keys(data.swaps).some(k => k.startsWith(d + "|") && data.swaps[k].length) || (data.offDays[d] || []).length || (data.creativeTech && data.creativeTech[d]));
         return `<button class="${cur === d ? "on" : ""} ${has ? "has" : ""}" data-day="${d}"><small>${dow(d)}${d === today ? " · today" : ""}</small><b>${Number(d.slice(8))}</b></button>`;
       }).join("")}</div>`;
   }
@@ -612,10 +672,18 @@
         if (r.team) {
           people = `<div class="people">${r.team.people.length ? r.people.map(p => {
             const key = day + "|" + s;
+            const from = p.reservedFor || p.swappedFrom || p.name;
+            if (p.vacant) {
+              if (ui.swapping && ui.swapping.key === key && ui.swapping.from === from) {
+                return `<div class="person vacant"><span class="nm" style="flex:none">Empty <span class="arr">→</span></span>
+                  <form class="swapbox" data-s="${s}" data-from="${esc(from)}"><select aria-label="Replacement for ${esc(from)}">${swapOptions(from, day)}</select><button type="button" class="btn ghost small" data-act="cancelswap">✕</button></form></div>`;
+              }
+              return `<div class="person vacant"><span class="nm">Empty slot</span><span class="was">${esc(from)} is off</span><button class="btn ghost small" data-act="swap" data-s="${s}" data-from="${esc(from)}">Add someone</button></div>`;
+            }
             if (p.swappedFrom) return `<div class="person sw"><span class="nm"><span class="old">${esc(p.swappedFrom)}</span><span class="arr">→</span><span class="new">${esc(p.name)}</span></span><button class="btn ghost small" data-act="undo" data-s="${s}" data-from="${esc(p.swappedFrom)}">Undo</button></div>`;
             if (ui.swapping && ui.swapping.key === key && ui.swapping.from === p.name) {
               return `<div class="person"><span class="nm" style="flex:none">${esc(p.name)} <span class="arr">→</span></span>
-                <form class="swapbox" data-s="${s}" data-from="${esc(p.name)}"><select aria-label="Replacement for ${esc(p.name)}">${swapOptions(p.name)}</select><button type="button" class="btn ghost small" data-act="cancelswap">✕</button></form></div>`;
+                <form class="swapbox" data-s="${s}" data-from="${esc(p.name)}"><select aria-label="Replacement for ${esc(p.name)}">${swapOptions(p.name, day)}</select><button type="button" class="btn ghost small" data-act="cancelswap">✕</button></form></div>`;
             }
             return `<div class="person"><span class="nm">${esc(p.name)}</span><button class="btn ghost small" data-act="swap" data-s="${s}" data-from="${esc(p.name)}">Swap</button></div>`;
           }).join("") : `<span class="empty">This team has no people yet.</span>`}</div>`;
@@ -626,43 +694,79 @@
         <select data-sess="${s}" aria-label="Team for session ${s}" style="border-left:6px solid ${teamColor(sel)}">${teamOptions(sel)}</select>
         ${note ? `<div class="tagline">${note}</div>` : ""}${people}</div></div>`;
     }).join("");
-    const offCard = isDef
-      ? `<div class="card"><div class="hint" style="margin:0">Pick a day above to mark who is off that day. Off days are set per date, not as a default.</div></div>`
-      : renderOffCard(day);
-    return `${dayStrip(day, true, "dayStrip")}${bar}${offCard}${items}`;
+    const side = isDef
+      ? `<div class="card"><div class="hint" style="margin:0">Pick a day above to mark the creative technologist for that day. Off days are set on the Off days tab for the whole event.</div></div>`
+      : renderCreativeCard(day);
+    return `${dayStrip(day, true, "dayStrip")}${bar}<div class="sched-layout">${side}<div class="sched-sessions">${items}</div></div>`;
   }
 
-  function renderOffCard(day) {
-    const off = new Set(data.offDays[day] || []);
+  function personGroups() {
     const inTeams = new Set();
     const groups = data.teams.map(t => {
       const people = (t.people || []).filter(Boolean);
       people.forEach(p => inTeams.add(p));
       return { name: t.name, people };
     }).filter(g => g.people.length);
-    const extra = [...off].filter(n => !inTeams.has(n));
-    if (extra.length) groups.push({ name: "Other", people: extra });
+    return { groups, inTeams };
+  }
+  function renderCreativeCard(day) {
+    const cur = (data.creativeTech || {})[day] || "";
+    const off = new Set(data.offDays[day] || []);
+    const { groups, inTeams } = personGroups();
+    if (cur && !inTeams.has(cur) && !groups.some(g => g.people.includes(cur))) {
+      groups.push({ name: "Other", people: [cur] });
+    }
     if (!groups.length) {
-      return `<div class="card" id="offCard">
-        <div class="off-head"><h2>Off <span>this day</span></h2>
-          <input type="date" class="off-date" id="offDate" value="${esc(day)}" aria-label="Off day date"></div>
-        <div class="empty">Add people on the Teams tab first, then you can mark who is off.</div></div>`;
+      return `<div class="card" id="ctCard">
+        <div class="off-head"><h2>Creative <span>technologist</span></h2></div>
+        <div class="empty">Add people on the Teams tab first, then you can mark the creative technologist for this day.</div></div>`;
     }
     const showTeam = groups.length > 1;
     const chips = groups.map(g =>
-      `${showTeam ? `<div class="off-team">${esc(g.name)}</div>` : ""}<div class="off-chips">${g.people.map(p =>
-        `<button type="button" class="off-chip${off.has(p) ? " on" : ""}" data-act="toggleoff" data-name="${esc(p)}" aria-pressed="${off.has(p) ? "true" : "false"}">${esc(p)}</button>`
-      ).join("")}</div>`
+      `${showTeam ? `<div class="off-team">${esc(g.name)}</div>` : ""}<div class="off-chips">${g.people.map(p => {
+        const isOff = off.has(p);
+        const on = cur === p;
+        return `<button type="button" class="off-chip ct-chip${on ? " on" : ""}" data-act="togglect" data-name="${esc(p)}" ${isOff ? "disabled" : ""} aria-pressed="${on ? "true" : "false"}">${esc(p)}${isOff ? " (off)" : ""}</button>`;
+      }).join("")}</div>`
     ).join("");
-    const n = off.size;
-    const summary = n ? n + " off this day: " + [...off].map(esc).join(", ") : "Nobody is marked off on this day.";
-    return `<div class="card" id="offCard">
-      <div class="off-head"><h2>Off <span>this day</span></h2>
-        <input type="date" class="off-date" id="offDate" value="${esc(day)}" aria-label="Off day date"></div>
-      <div class="hint">Tap a name to mark them off. They still stay on their sessions, and they appear beside the schedule on the /in page.</div>
+    const summary = cur ? "Creative technologist today: " + esc(cur) : "Nobody is marked as creative technologist on this day.";
+    return `<div class="card" id="ctCard">
+      <div class="off-head"><h2>Creative <span>technologist</span></h2></div>
+      <div class="hint">Tap a name to mark them. They appear to the left of the schedule on /in, opposite Off today. One person per day.</div>
       ${chips}
       <div class="off-summary">${summary}</div>
     </div>`;
+  }
+
+  function renderOffDays() {
+    const { groups } = personGroups();
+    if (!groups.length) {
+      return `<div class="hint">Set who is off on each day of the event (12–30 Nov). A person who is off cannot be assigned or swapped onto that day's schedule; their slot is left empty so you can add a replacement.</div>
+        <div class="card empty">Add people on the Teams tab first, then you can mark off days.</div>`;
+    }
+    const head = DATES.map(d => `<th class="${d === today ? "today" : ""}" title="${esc(dow(d) + " " + d)}"><small>${dow(d)[0]}</small><br>${Number(d.slice(8))}</th>`).join("");
+    const body = groups.map(g => {
+      const row = `<tr class="team-row"><td class="name" colspan="${DATES.length + 1}">${esc(g.name)}</td></tr>`;
+      const people = g.people.map(name => {
+        const cells = DATES.map(d => {
+          const on = (data.offDays[d] || []).includes(name);
+          return `<td class="${d === today ? "today" : ""}"><button type="button" class="off-cell${on ? " on" : ""}" data-act="toggleoff" data-day="${d}" data-name="${esc(name)}" aria-pressed="${on ? "true" : "false"}" title="${esc(name)} · ${dow(d)} ${Number(d.slice(8))} Nov${on ? " · off" : ""}">${on ? "OFF" : ""}</button></td>`;
+        }).join("");
+        return `<tr><td class="name">${esc(name)}</td>${cells}</tr>`;
+      }).join("");
+      return row + people;
+    }).join("");
+    return `<div class="hint">Tap a cell to mark someone off for that day. Off people cannot be added to that day's sessions, and their slot is left empty on /in and on Sessions so you can put someone in their place. This grid replaces the old day-by-day off list.</div>
+      <div class="card">
+        <div class="off-head"><h2>Off <span>days</span></h2></div>
+        <div class="off-grid-wrap">
+          <table class="off-grid">
+            <caption>Event period · 12–30 November</caption>
+            <thead><tr><th class="name">Name</th>${head}</tr></thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+      </div>`;
   }
 
   function numRec(s) { return ((data.numbers || {})[ui.numbersDay] || {})[String(s)] || null; }
@@ -878,21 +982,18 @@
       inp.addEventListener("blur", apply);
     });
     app.querySelectorAll("[data-act=nclear]").forEach(b => b.onclick = () => { numClear(Number(b.dataset.s)); render(); });
-    const od = document.getElementById("offDate");
-    if (od) od.onchange = () => {
-      const v = od.value;
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return;
-      ui.day = v; ui.swapping = null; render();
-    };
     app.querySelectorAll("[data-act=toggleoff]").forEach(b => b.onclick = () => {
+      const day = b.dataset.day || ui.day;
+      if (!day || day === "default") return;
+      const name = b.dataset.name;
+      const on = !((data.offDays[day] || []).includes(name));
+      change(() => setPersonOff(day, name, on));
+    });
+    app.querySelectorAll("[data-act=togglect]").forEach(b => b.onclick = () => {
       if (ui.day === "default") return;
       const name = b.dataset.name;
-      change(() => {
-        const cur = new Set(data.offDays[ui.day] || []);
-        if (cur.has(name)) cur.delete(name); else cur.add(name);
-        if (cur.size) data.offDays[ui.day] = [...cur];
-        else delete data.offDays[ui.day];
-      });
+      if ((data.offDays[ui.day] || []).includes(name)) return;
+      change(() => setCreative(ui.day, name));
     });
     // Day-chip alignment is handled in render() via alignDayStrip(), which
     // only scrolls the horizontal strip and does not move the page.

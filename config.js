@@ -17,7 +17,18 @@
      data = { teams:[{id,name,people:[]}], daily:{ "1":teamId,... },
               days:{ "YYYY-MM-DD": { "1": teamId | "" } }, swaps:{ "YYYY-MM-DD|1": [{from,to}] },
               offDays:{ "YYYY-MM-DD": ["Name", ...] },
+              creativeTech:{ "YYYY-MM-DD": "Name" },
               numbers:{ "YYYY-MM-DD": { "1": {participants, engagement} } } } */
+  window.XR_isOff = function (data, ymd, name) {
+    name = String(name || "").trim();
+    if (!name) return false;
+    var list = ((data || {}).offDays || {})[ymd] || [];
+    return list.indexOf(name) >= 0;
+  };
+  window.XR_creativeTech = function (data, ymd) {
+    var v = ((data || {}).creativeTech || {})[ymd];
+    return typeof v === "string" && v.trim() ? v.trim() : "";
+  };
   window.XR_resolve = function (data, ymd, s) {
     data = data || {};
     var key = String(s);
@@ -30,7 +41,16 @@
     });
     var people = team ? team.people.map(function (p) {
       var w = swaps.find(function (x) { return x.from === p; });
-      return w ? { name: w.to, swappedFrom: p } : { name: p };
+      if (w) {
+        if (window.XR_isOff(data, ymd, w.to)) {
+          return { name: "", vacant: true, swappedFrom: p, reservedFor: p };
+        }
+        return { name: w.to, swappedFrom: p };
+      }
+      if (window.XR_isOff(data, ymd, p)) {
+        return { name: "", vacant: true, reservedFor: p };
+      }
+      return { name: p };
     }) : [];
     return { team: team, overridden: overridden, swaps: swaps, people: people };
   };
