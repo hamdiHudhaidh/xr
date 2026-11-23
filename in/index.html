@@ -1098,7 +1098,8 @@
         autoRun = next;
         if (window.__xrRunGirl) window.__xrRunGirl.autoRun = autoRun;
         if (autoRun) {
-          if (!runBusy) scheduleNextRun();
+          // Off-to-on: start immediately (within the /data poll), then 5s/5s after that.
+          if (!runBusy) startRun();
         } else if (runAutoTimer) {
           clearTimeout(runAutoTimer);
           runAutoTimer = null;
