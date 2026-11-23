@@ -408,6 +408,7 @@
       height: 15vmin;
       width: calc(15vmin * 708 / 1100);
       visibility: hidden;
+      transform-origin: 50% 50%;
       will-change: transform;
       user-select: none;
       -webkit-user-select: none;
@@ -984,9 +985,9 @@
         document.fonts.ready.then(() => updateHighlight());
       }
 
-      // ---- Running girl: 10s crossing every 60s, plus Admin "Run now" via data.runAt ----
+      // ---- Running girl: 5s crossing every 60s, plus Admin "Run now" via data.runAt ----
       const RUN_EVERY_MS = 60000;
-      const RUN_VISIBLE_MS = 10000;
+      const RUN_VISIBLE_MS = 5000;
       const RUN_FRAME_MS = 90;
       const RUN_ASPECT = 708 / 1100;
       const runGirl = document.getElementById("run-girl");
@@ -1020,8 +1021,8 @@
         const opposite = { left: "right", right: "left", top: "bottom", bottom: "top" };
         const edges = ["left", "right", "top", "bottom"];
         let startEdge, endEdge;
-        if (dirPref === "right") { startEdge = "left"; endEdge = "right"; }
-        else if (dirPref === "left") { startEdge = "right"; endEdge = "left"; }
+        if (dirPref === "right" || dirPref === "diag-right") { startEdge = "left"; endEdge = "right"; }
+        else if (dirPref === "left" || dirPref === "diag-left") { startEdge = "right"; endEdge = "left"; }
         else {
           startEdge = edges[Math.floor(Math.random() * 4)];
           endEdge = Math.random() < 0.75
@@ -1034,6 +1035,10 @@
           const y = (vh - sh) / 2;
           start.y = y;
           end.y = y;
+        } else if (dirPref === "diag-right" || dirPref === "diag-left") {
+          // Steep upward diagonal so body tilt is obvious in previews (~25deg).
+          start.y = vh * 0.80;
+          end.y = vh * 0.05 - sh;
         }
         // If the crossing would only clip a corner, fall back to opposite edges.
         const minSpan = Math.min(vw, vh) * 0.45;
@@ -1044,6 +1049,20 @@
         }
         const facing = end.x >= start.x ? "right" : "left";
         return { start, end, facing, sw: sw, sh: sh };
+      }
+      // Angle of the straight path, in degrees. Right-facing frames use atan2(dy, dx);
+      // left-facing (already flipped) frames use that angle relative to leftward,
+      // wrapped into -90..90 so the character is never upside down.
+      function travelAngle(start, end, facing) {
+        let deg = Math.atan2(end.y - start.y, end.x - start.x) * 180 / Math.PI;
+        if (facing === "left") deg -= 180;
+        deg = ((deg + 180) % 360 + 360) % 360 - 180;
+        if (deg > 90) deg -= 180;
+        if (deg < -90) deg += 180;
+        return deg;
+      }
+      function runTransform(x, y, angle) {
+        return "translate(" + x + "px," + y + "px) rotate(" + angle + "deg)";
       }
       // Fraction of the off-to-off path during which any of the sprite is on screen.
       function visibleFrac(path, vw, vh) {
@@ -1085,8 +1104,9 @@
         clearRunAnim();
         if (runAutoTimer) { clearInterval(runAutoTimer); }
         runAutoTimer = setInterval(function () { startRun(); }, RUN_EVERY_MS);
+        const angle = travelAngle(path.start, path.end, path.facing);
         runGirl.className = "on " + path.facing + " a";
-        runGirl.style.transform = "translate(" + path.start.x + "px," + path.start.y + "px)";
+        runGirl.style.transform = runTransform(path.start.x, path.start.y, angle);
         let frameB = false;
         runFrameTimer = setInterval(function () {
           frameB = !frameB;
@@ -1101,11 +1121,11 @@
           const t = Math.min(1, (now - t0) / dur);
           const x = start.x + (end.x - start.x) * t;
           const y = start.y + (end.y - start.y) * t;
-          runGirl.style.transform = "translate(" + x + "px," + y + "px)";
+          runGirl.style.transform = runTransform(x, y, angle);
           if (t < 1) runRaf = requestAnimationFrame(tick);
           else endRun();
         })(t0);
-        if (window.__xrRunGirl) window.__xrRunGirl.last = { facing: path.facing, start: path.start, end: path.end, t0: t0, duration: dur };
+        if (window.__xrRunGirl) window.__xrRunGirl.last = { facing: path.facing, start: path.start, end: path.end, angle: angle, t0: t0, duration: dur };
         return true;
       }
       function requestRun(opts) {
@@ -1130,7 +1150,7 @@
       preloadRunFrames();
       runAutoTimer = setInterval(function () { startRun(); }, RUN_EVERY_MS);
       const runQ = new URLSearchParams(location.search).get("run");
-      if (runQ === "right" || runQ === "left" || runQ === "now") {
+      if (runQ === "right" || runQ === "left" || runQ === "now" || runQ === "diag-right" || runQ === "diag-left") {
         const startSoon = function () { requestRun(runQ === "now" ? {} : { dir: runQ }); };
         if (runGirl.querySelector("img.right-a").complete) startSoon();
         else runGirl.querySelector("img.right-a").addEventListener("load", startSoon, { once: true });
