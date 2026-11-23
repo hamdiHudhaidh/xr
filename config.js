@@ -19,7 +19,8 @@
               offDays:{ "YYYY-MM-DD": ["Name", ...] },
               creativeTech:{ "YYYY-MM-DD": "Name" },
               numbers:{ "YYYY-MM-DD": { "1": {participants, engagement} } },
-              runAt: "nonce from Admin Run now" } */
+              runAt: "nonce from Admin Run now",
+              autoRun: "true to run the 5s on / 5s off cycle" } */
   window.XR_isOff = function (data, ymd, name) {
     name = String(name || "").trim();
     if (!name) return false;

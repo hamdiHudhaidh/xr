@@ -27,6 +27,7 @@
   header h1 { font-size: 20px; margin: 0; font-weight: 800; letter-spacing: .01em; }
   header h1 span { color: var(--yellow); }
   header .btn { flex: 0 0 auto; }
+  header .btn[aria-pressed="true"] { background: var(--yellow); color: var(--purple); }
   .status { margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.1); color: var(--muted); white-space: nowrap; }
   .status.ok { color: var(--yellow); }
   .status.err { background: var(--pink); color: #fff; }
@@ -314,6 +315,7 @@
     }
     return out;
   }
+  function normalizeAutoRun(v) { return v === true; }
   function normalizeRunAt(v) {
     if (typeof v === "number" && Number.isFinite(v)) return String(Math.round(v));
     if (typeof v === "string") {
@@ -324,7 +326,7 @@
   }
   function normalize(d) {
     d = d && typeof d === "object" ? d : {};
-    const known = { version: 2, teams: Array.isArray(d.teams) ? d.teams : [], daily: d.daily || {}, days: d.days || {}, swaps: d.swaps || {}, offDays: normalizeOffDays(d.offDays), creativeTech: normalizeCreativeTech(d.creativeTech), numbers: normalizeNumbers(d.numbers), updatedAt: d.updatedAt || null, runAt: normalizeRunAt(d.runAt) };
+    const known = { version: 2, teams: Array.isArray(d.teams) ? d.teams : [], daily: d.daily || {}, days: d.days || {}, swaps: d.swaps || {}, offDays: normalizeOffDays(d.offDays), creativeTech: normalizeCreativeTech(d.creativeTech), numbers: normalizeNumbers(d.numbers), updatedAt: d.updatedAt || null, runAt: normalizeRunAt(d.runAt), autoRun: normalizeAutoRun(d.autoRun) };
     for (const k of Object.keys(d)) if (!(k in known)) known[k] = d[k];
     return known;
   }
@@ -532,6 +534,34 @@
       setStatus("Run not sent · retry", "err");
     }
   }
+  function updateAutoRunButton() {
+    const b = document.getElementById("autoRunBtn");
+    if (!b || !data) return;
+    const on = !!data.autoRun;
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.className = "btn small" + (on ? "" : " ghost");
+    b.textContent = "Auto run: " + (on ? "On" : "Off");
+    b.title = on ? "Turn off the automatic 5s on / 5s off run cycle" : "Turn on the automatic 5s on / 5s off run cycle";
+  }
+  async function toggleAutoRun() {
+    if (!data) return;
+    clearTimeout(saveTimer);
+    data.autoRun = !data.autoRun;
+    dirty = true;
+    updateAutoRunButton();
+    setStatus(data.autoRun ? "Turning auto run on…" : "Turning auto run off…");
+    try {
+      data.updatedAt = new Date().toISOString();
+      await api("PUT", data);
+      dirty = false;
+      setStatus(data.autoRun ? "Auto run on ✓" : "Auto run off ✓", "ok");
+    } catch (e) {
+      data.autoRun = !data.autoRun;
+      updateAutoRunButton();
+      if (e.code === 401) { localStorage.removeItem(PASS_KEY); pass = ""; renderGate("Passcode no longer valid. Enter it again."); return; }
+      setStatus("Auto run not saved · retry", "err");
+    }
+  }
   function change(fn) { fn(); save(); render(); }
 
   // ---------- Passcode gate ----------
@@ -619,6 +649,7 @@
       <header><h1>XR Hub <span>Admin</span></h1>
         <div class="status ${statusCls}" id="status">${esc(statusText)}</div>
         <button class="btn small" id="runNowBtn" type="button" title="Make the running girl cross the /in screen once">Run now</button>
+        <button class="btn small${data.autoRun ? "" : " ghost"}" id="autoRunBtn" type="button" aria-pressed="${data.autoRun ? "true" : "false"}" title="${data.autoRun ? "Turn off the automatic 5s on / 5s off run cycle" : "Turn on the automatic 5s on / 5s off run cycle"}">Auto run: ${data.autoRun ? "On" : "Off"}</button>
         <a class="lock" href="../clicker/">Clicker</a>
         <a class="lock" href="../kpi/">KPI</a>
         <button class="lock" id="lockBtn" title="Forget passcode on this device">Lock</button></header>
@@ -955,6 +986,8 @@
     document.getElementById("lockBtn").onclick = () => { localStorage.removeItem(PASS_KEY); pass = ""; renderGate(); };
     const runBtn = document.getElementById("runNowBtn");
     if (runBtn) runBtn.onclick = () => { runNow(); };
+    const autoBtn = document.getElementById("autoRunBtn");
+    if (autoBtn) autoBtn.onclick = () => { toggleAutoRun(); };
     app.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { ui.tab = b.dataset.tab; ui.swapping = null; render(); window.scrollTo(0, 0); });
 
     const nt = document.getElementById("newTeam");

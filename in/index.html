@@ -961,6 +961,7 @@
             if (j && typeof j === "object" && !Array.isArray(j)) {
               teamData = j;
               noteRunAt(j.runAt);
+              applyAutoRun(j.autoRun);
             }
           });
           const avP = fetchJson(window.XR_API + "/avatars").then(j => {
@@ -985,9 +986,8 @@
         document.fonts.ready.then(() => updateHighlight());
       }
 
-      // ---- Running girl: 5s on, 5s off when AUTO_RUN is true; Admin "Run now" via data.runAt ----
-      // Flip AUTO_RUN to true to restore the automatic 5s-on / 5s-off schedule.
-      const AUTO_RUN = false;
+      // ---- Running girl: 5s on, 5s off when data.autoRun is true; Admin "Run now" via data.runAt ----
+      // autoRun comes from /data (admin toggle). Missing or any non-true value means off.
       const RUN_GAP_MS = 5000;
       const RUN_VISIBLE_MS = 5000;
       const RUN_FRAME_MS = 90;
@@ -995,6 +995,7 @@
       const runGirl = document.getElementById("run-girl");
       let runRaf = 0, runFrameTimer = null, runAutoTimer = null, runEndTimer = null, runPending = false, runBusy = false;
       let lastRunAt = null, runAtArmed = false;
+      let autoRun = false;
 
       function preloadRunFrames() {
         ["../assets/run-girl11-1.png", "../assets/run-girl11-2.png",
@@ -1088,8 +1089,20 @@
       }
       function scheduleNextRun() {
         if (runAutoTimer) { clearTimeout(runAutoTimer); runAutoTimer = null; }
-        if (!AUTO_RUN) return;
+        if (!autoRun) return;
         runAutoTimer = setTimeout(function () { startRun(); }, RUN_GAP_MS);
+      }
+      function applyAutoRun(value) {
+        const next = value === true;
+        if (next === autoRun) return;
+        autoRun = next;
+        if (window.__xrRunGirl) window.__xrRunGirl.autoRun = autoRun;
+        if (autoRun) {
+          if (!runBusy) scheduleNextRun();
+        } else if (runAutoTimer) {
+          clearTimeout(runAutoTimer);
+          runAutoTimer = null;
+        }
       }
       function endRun() {
         if (!runBusy) return;
@@ -1153,7 +1166,7 @@
         last: null,
         gapMs: RUN_GAP_MS,
         visibleMs: RUN_VISIBLE_MS,
-        autoRun: AUTO_RUN
+        autoRun: autoRun
       };
 
       preloadRunFrames();
@@ -1173,6 +1186,7 @@
         fetchJson(window.XR_API + "/data").then(function (j) {
           if (!j || typeof j !== "object" || Array.isArray(j)) return;
           noteRunAt(j.runAt);
+          applyAutoRun(j.autoRun);
           if (j.updatedAt && teamData && j.updatedAt !== teamData.updatedAt) {
             teamData = j;
             updateHighlight();
