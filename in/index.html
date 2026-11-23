@@ -985,7 +985,9 @@
         document.fonts.ready.then(() => updateHighlight());
       }
 
-      // ---- Running girl: 5s on, 5s off, first run ~5s after load; Admin "Run now" via data.runAt ----
+      // ---- Running girl: 5s on, 5s off when AUTO_RUN is true; Admin "Run now" via data.runAt ----
+      // Flip AUTO_RUN to true to restore the automatic 5s-on / 5s-off schedule.
+      const AUTO_RUN = false;
       const RUN_GAP_MS = 5000;
       const RUN_VISIBLE_MS = 5000;
       const RUN_FRAME_MS = 90;
@@ -1086,6 +1088,7 @@
       }
       function scheduleNextRun() {
         if (runAutoTimer) { clearTimeout(runAutoTimer); runAutoTimer = null; }
+        if (!AUTO_RUN) return;
         runAutoTimer = setTimeout(function () { startRun(); }, RUN_GAP_MS);
       }
       function endRun() {
@@ -1149,7 +1152,8 @@
         isRunning: function () { return runBusy; },
         last: null,
         gapMs: RUN_GAP_MS,
-        visibleMs: RUN_VISIBLE_MS
+        visibleMs: RUN_VISIBLE_MS,
+        autoRun: AUTO_RUN
       };
 
       preloadRunFrames();
