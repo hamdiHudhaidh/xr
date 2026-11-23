@@ -985,8 +985,8 @@
         document.fonts.ready.then(() => updateHighlight());
       }
 
-      // ---- Running girl: 5s crossing every 60s, plus Admin "Run now" via data.runAt ----
-      const RUN_EVERY_MS = 60000;
+      // ---- Running girl: 5s on, 5s off, first run ~5s after load; Admin "Run now" via data.runAt ----
+      const RUN_GAP_MS = 5000;
       const RUN_VISIBLE_MS = 5000;
       const RUN_FRAME_MS = 90;
       const RUN_ASPECT = 708 / 1100;
@@ -1084,6 +1084,10 @@
         if (runFrameTimer) { clearInterval(runFrameTimer); runFrameTimer = null; }
         if (runEndTimer) { clearTimeout(runEndTimer); runEndTimer = null; }
       }
+      function scheduleNextRun() {
+        if (runAutoTimer) { clearTimeout(runAutoTimer); runAutoTimer = null; }
+        runAutoTimer = setTimeout(function () { startRun(); }, RUN_GAP_MS);
+      }
       function endRun() {
         if (!runBusy) return;
         clearRunAnim();
@@ -1092,18 +1096,19 @@
         if (runPending) {
           runPending = false;
           startRun();
+        } else {
+          scheduleNextRun();
         }
       }
       function startRun(opts) {
         opts = opts || {};
         if (runBusy) { runPending = true; return false; }
         if (!runGirl) return false;
+        if (runAutoTimer) { clearTimeout(runAutoTimer); runAutoTimer = null; }
         const path = pickRunPath(opts.dir);
         runBusy = true;
         runPending = false;
         clearRunAnim();
-        if (runAutoTimer) { clearInterval(runAutoTimer); }
-        runAutoTimer = setInterval(function () { startRun(); }, RUN_EVERY_MS);
         const angle = travelAngle(path.start, path.end, path.facing);
         runGirl.className = "on " + path.facing + " a";
         runGirl.style.transform = runTransform(path.start.x, path.start.y, angle);
@@ -1143,12 +1148,12 @@
         request: requestRun,
         isRunning: function () { return runBusy; },
         last: null,
-        everyMs: RUN_EVERY_MS,
+        gapMs: RUN_GAP_MS,
         visibleMs: RUN_VISIBLE_MS
       };
 
       preloadRunFrames();
-      runAutoTimer = setInterval(function () { startRun(); }, RUN_EVERY_MS);
+      scheduleNextRun();
       const runQ = new URLSearchParams(location.search).get("run");
       if (runQ === "right" || runQ === "left" || runQ === "now" || runQ === "diag-right" || runQ === "diag-left") {
         const startSoon = function () { requestRun(runQ === "now" ? {} : { dir: runQ }); };
