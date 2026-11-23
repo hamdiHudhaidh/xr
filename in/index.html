@@ -392,6 +392,40 @@
       width: 100%;
       min-height: 0;
     }
+
+    /* Running girl: crosses above schedule and KPI, never captures clicks. */
+    #run-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 6;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    #run-girl {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 30vmin;
+      width: calc(30vmin * 708 / 1100);
+      visibility: hidden;
+      will-change: transform;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #run-girl img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: auto;
+      display: none;
+      pointer-events: none;
+    }
+    #run-girl.on { visibility: visible; }
+    #run-girl.right.a img.right-a,
+    #run-girl.right.b img.right-b,
+    #run-girl.left.a img.left-a,
+    #run-girl.left.b img.left-b { display: block; }
   </style>
 </head>
 <body>
@@ -407,6 +441,14 @@
     <div id="player"></div>
   </div>
   <div id="hint">Tap for fullscreen</div>
+  <div id="run-layer" aria-hidden="true">
+    <div id="run-girl">
+      <img class="right-a" src="../assets/run-girl11-1.png" alt="">
+      <img class="right-b" src="../assets/run-girl11-2.png" alt="">
+      <img class="left-a" src="../assets/run-girl11-1-flipped.png" alt="">
+      <img class="left-b" src="../assets/run-girl11-2-flipped.png" alt="">
+    </div>
+  </div>
   <script src="../poster-date.js"></script>
   <script src="../config.js"></script>
 
@@ -915,7 +957,10 @@
         if (!window.XR_API) return;
         try {
           const dataP = fetchJson(window.XR_API + "/data").then(j => {
-            if (j && typeof j === "object" && !Array.isArray(j)) teamData = j;
+            if (j && typeof j === "object" && !Array.isArray(j)) {
+              teamData = j;
+              noteRunAt(j.runAt);
+            }
           });
           const avP = fetchJson(window.XR_API + "/avatars").then(j => {
             if (j && typeof j === "object" && !Array.isArray(j)) avatars = j;
@@ -938,8 +983,175 @@
         document.fonts.load("700 14px Cairo").catch(() => {});
         document.fonts.ready.then(() => updateHighlight());
       }
+
+      // ---- Running girl: 10s crossing every 60s, plus Admin "Run now" via data.runAt ----
+      const RUN_EVERY_MS = 60000;
+      const RUN_VISIBLE_MS = 10000;
+      const RUN_FRAME_MS = 90;
+      const RUN_ASPECT = 708 / 1100;
+      const runGirl = document.getElementById("run-girl");
+      let runRaf = 0, runFrameTimer = null, runAutoTimer = null, runEndTimer = null, runPending = false, runBusy = false;
+      let lastRunAt = null, runAtArmed = false;
+
+      function preloadRunFrames() {
+        ["../assets/run-girl11-1.png", "../assets/run-girl11-2.png",
+         "../assets/run-girl11-1-flipped.png", "../assets/run-girl11-2-flipped.png"].forEach(src => {
+          const im = new Image();
+          im.src = src;
+        });
+      }
+      function rand(a, b) { return a + Math.random() * (b - a); }
+      function runSize() {
+        const h = runGirl.offsetHeight || Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.3);
+        return { w: h * RUN_ASPECT, h: h };
+      }
+      // Pick a start just outside one edge and an end just outside a different,
+      // preferably opposite, edge so the path crosses the screen.
+      function pickRunPath(dirPref) {
+        const vw = window.innerWidth, vh = window.innerHeight;
+        const { w: sw, h: sh } = runSize();
+        const pad = 8;
+        function along(edge) {
+          if (edge === "left") return { x: -sw - pad, y: rand(-sh * 0.25, vh - sh * 0.75) };
+          if (edge === "right") return { x: vw + pad, y: rand(-sh * 0.25, vh - sh * 0.75) };
+          if (edge === "top") return { x: rand(-sw * 0.25, vw - sw * 0.75), y: -sh - pad };
+          return { x: rand(-sw * 0.25, vw - sw * 0.75), y: vh + pad };
+        }
+        const opposite = { left: "right", right: "left", top: "bottom", bottom: "top" };
+        const edges = ["left", "right", "top", "bottom"];
+        let startEdge, endEdge;
+        if (dirPref === "right") { startEdge = "left"; endEdge = "right"; }
+        else if (dirPref === "left") { startEdge = "right"; endEdge = "left"; }
+        else {
+          startEdge = edges[Math.floor(Math.random() * 4)];
+          endEdge = Math.random() < 0.75
+            ? opposite[startEdge]
+            : edges.filter(e => e !== startEdge)[Math.floor(Math.random() * 3)];
+        }
+        let start = along(startEdge), end = along(endEdge);
+        if (dirPref === "right" || dirPref === "left") {
+          // Mid-screen horizontal path, used for previews and tests.
+          const y = (vh - sh) / 2;
+          start.y = y;
+          end.y = y;
+        }
+        // If the crossing would only clip a corner, fall back to opposite edges.
+        const minSpan = Math.min(vw, vh) * 0.45;
+        const dx = end.x - start.x, dy = end.y - start.y;
+        if (!dirPref && Math.hypot(dx, dy) < minSpan) {
+          endEdge = opposite[startEdge];
+          end = along(endEdge);
+        }
+        const facing = end.x >= start.x ? "right" : "left";
+        return { start, end, facing, sw: sw, sh: sh };
+      }
+      // Fraction of the off-to-off path during which any of the sprite is on screen.
+      function visibleFrac(path, vw, vh) {
+        const { start, end, sw, sh } = path;
+        let enter = null, exit = null;
+        const steps = 200;
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const x = start.x + (end.x - start.x) * t;
+          const y = start.y + (end.y - start.y) * t;
+          const vis = x + sw > 0 && x < vw && y + sh > 0 && y < vh;
+          if (vis) { if (enter == null) enter = t; exit = t; }
+        }
+        if (enter == null) return 1;
+        return Math.max(0.2, exit - enter);
+      }
+      function clearRunAnim() {
+        if (runRaf) { cancelAnimationFrame(runRaf); runRaf = 0; }
+        if (runFrameTimer) { clearInterval(runFrameTimer); runFrameTimer = null; }
+        if (runEndTimer) { clearTimeout(runEndTimer); runEndTimer = null; }
+      }
+      function endRun() {
+        if (!runBusy) return;
+        clearRunAnim();
+        runGirl.classList.remove("on", "right", "left", "a", "b");
+        runBusy = false;
+        if (runPending) {
+          runPending = false;
+          startRun();
+        }
+      }
+      function startRun(opts) {
+        opts = opts || {};
+        if (runBusy) { runPending = true; return false; }
+        if (!runGirl) return false;
+        const path = pickRunPath(opts.dir);
+        runBusy = true;
+        runPending = false;
+        clearRunAnim();
+        if (runAutoTimer) { clearInterval(runAutoTimer); }
+        runAutoTimer = setInterval(function () { startRun(); }, RUN_EVERY_MS);
+        runGirl.className = "on " + path.facing + " a";
+        runGirl.style.transform = "translate(" + path.start.x + "px," + path.start.y + "px)";
+        let frameB = false;
+        runFrameTimer = setInterval(function () {
+          frameB = !frameB;
+          runGirl.classList.toggle("a", !frameB);
+          runGirl.classList.toggle("b", frameB);
+        }, RUN_FRAME_MS);
+        const t0 = performance.now();
+        const dur = RUN_VISIBLE_MS / visibleFrac(path, window.innerWidth, window.innerHeight);
+        const start = path.start, end = path.end;
+        runEndTimer = setTimeout(endRun, dur + 80);
+        (function tick(now) {
+          const t = Math.min(1, (now - t0) / dur);
+          const x = start.x + (end.x - start.x) * t;
+          const y = start.y + (end.y - start.y) * t;
+          runGirl.style.transform = "translate(" + x + "px," + y + "px)";
+          if (t < 1) runRaf = requestAnimationFrame(tick);
+          else endRun();
+        })(t0);
+        if (window.__xrRunGirl) window.__xrRunGirl.last = { facing: path.facing, start: path.start, end: path.end, t0: t0, duration: dur };
+        return true;
+      }
+      function requestRun(opts) {
+        startRun(opts);
+      }
+      function noteRunAt(value) {
+        const v = (value == null || value === "") ? "" : String(value);
+        if (!runAtArmed) { lastRunAt = v; runAtArmed = true; return; }
+        if (!v || v === lastRunAt) return;
+        lastRunAt = v;
+        requestRun();
+      }
+      window.__xrRunGirl = {
+        start: startRun,
+        request: requestRun,
+        isRunning: function () { return runBusy; },
+        last: null,
+        everyMs: RUN_EVERY_MS,
+        visibleMs: RUN_VISIBLE_MS
+      };
+
+      preloadRunFrames();
+      runAutoTimer = setInterval(function () { startRun(); }, RUN_EVERY_MS);
+      const runQ = new URLSearchParams(location.search).get("run");
+      if (runQ === "right" || runQ === "left" || runQ === "now") {
+        const startSoon = function () { requestRun(runQ === "now" ? {} : { dir: runQ }); };
+        if (runGirl.querySelector("img.right-a").complete) startSoon();
+        else runGirl.querySelector("img.right-a").addEventListener("load", startSoon, { once: true });
+      }
+
+
       loadTeams();
       setInterval(loadTeams, 45000);
+      setInterval(function () {
+        if (!window.XR_API) return;
+        fetchJson(window.XR_API + "/data").then(function (j) {
+          if (!j || typeof j !== "object" || Array.isArray(j)) return;
+          noteRunAt(j.runAt);
+          if (j.updatedAt && teamData && j.updatedAt !== teamData.updatedAt) {
+            teamData = j;
+            updateHighlight();
+          } else if (j && !teamData) {
+            teamData = j;
+          }
+        }).catch(function () {});
+      }, 3000);
       window.addEventListener("resize", layoutBox);
       layoutBox();
       updateHighlight();

@@ -18,7 +18,8 @@
               days:{ "YYYY-MM-DD": { "1": teamId | "" } }, swaps:{ "YYYY-MM-DD|1": [{from,to}] },
               offDays:{ "YYYY-MM-DD": ["Name", ...] },
               creativeTech:{ "YYYY-MM-DD": "Name" },
-              numbers:{ "YYYY-MM-DD": { "1": {participants, engagement} } } } */
+              numbers:{ "YYYY-MM-DD": { "1": {participants, engagement} } },
+              runAt: "nonce from Admin Run now" } */
   window.XR_isOff = function (data, ymd, name) {
     name = String(name || "").trim();
     if (!name) return false;
