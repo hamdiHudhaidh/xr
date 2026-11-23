@@ -405,8 +405,8 @@
       position: absolute;
       top: 0;
       left: 0;
-      height: 30vmin;
-      width: calc(30vmin * 708 / 1100);
+      height: 15vmin;
+      width: calc(15vmin * 708 / 1100);
       visibility: hidden;
       will-change: transform;
       user-select: none;
@@ -1002,7 +1002,7 @@
       }
       function rand(a, b) { return a + Math.random() * (b - a); }
       function runSize() {
-        const h = runGirl.offsetHeight || Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.3);
+        const h = runGirl.offsetHeight || Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.15);
         return { w: h * RUN_ASPECT, h: h };
       }
       // Pick a start just outside one edge and an end just outside a different,
